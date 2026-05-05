@@ -1,0 +1,349 @@
+// ============================================================
+// Landa Admin API — Documents, Categories, Courses
+// Endpoints trên LMS: /api/landa/admin/
+// Auth: Bearer token (OAuth2) — tự động qua apiClient
+// ============================================================
+
+import { apiClient } from './client';
+
+// ── Types ──
+
+export interface LandaDocument {
+  id: number;
+  title: string;
+  extension: string;
+  file_size: number;
+  file_size_display: string;
+  category_id: number | string;
+  category_name: string;
+  is_visible: boolean;
+  uploaded_by_name: string;
+  created_at: string;
+}
+
+export interface LandaCategory {
+  id: number;
+  name: string;
+  slug: string;
+  sort_order: number;
+  doc_count: number;
+}
+
+export interface LandaCourse {
+  id: string;
+  display_name: string;
+  org: string;
+  visible_to_staff_only: boolean;
+  start: string;
+  end: string;
+  created: string;
+  modified: string;
+}
+
+interface PaginatedResponse<T> {
+  total: number;
+  page: number;
+  page_size: number;
+  data: T[];
+}
+
+export interface ReportSummaryResponse {
+  meta: {
+    month: number;
+    year: number;
+    month_label: string;
+    is_current_month: boolean;
+  };
+  overview: {
+    total_learners: number;
+    total_staff: number;
+    active_learners: number;
+    total_courses: number;
+  };
+  lists: {
+    uncompleted_trend: Array<{
+      day: string;
+      count: number;
+    }>;
+  };
+}
+
+export interface ReportChartResponse {
+  year: number;
+  metric: string;
+  data: Array<{ month: string; value: number }>;
+}
+
+export interface ReportTopCourse {
+  course_id: string;
+  name: string;
+  enrollments: number;
+}
+
+export interface ReportUncompletedLearner {
+  username: string;
+  email: string;
+  enrolled_at: string | null;
+}
+
+export interface ReportPaginatedResponse<T> {
+  count: number;
+  total_pages: number;
+  current_page: number;
+  results: T[];
+}
+
+// Base path cho admin API (trên LMS, proxy qua /api)
+const BASE = '/api/landa/admin';
+
+// ══════════════════════════════════════════════
+// Documents API
+// ══════════════════════════════════════════════
+
+export async function getDocuments(params: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  category_id?: number | string;
+  extension?: string;
+}): Promise<PaginatedResponse<LandaDocument>> {
+  const { data } = await apiClient.get(`${BASE}/documents/`, { params });
+  return {
+    data: data.documents,
+    total: data.total,
+    page: data.page,
+    page_size: data.page_size,
+  };
+}
+
+export async function uploadDocument(formData: FormData): Promise<{ success: boolean; created: number; errors?: string[] }> {
+  const { data } = await apiClient.post(`${BASE}/documents/`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
+export async function updateDocument(docId: number, updates: {
+  title?: string;
+  is_visible?: boolean;
+  category_id?: number | null;
+}): Promise<{ success: boolean }> {
+  const { data } = await apiClient.patch(`${BASE}/documents/${docId}/`, updates);
+  return data;
+}
+
+export async function deleteDocument(docId: number): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/documents/${docId}/`);
+  return data;
+}
+
+export async function bulkDocumentAction(ids: number[], action: 'show' | 'hide' | 'set_category', categoryId?: number | null): Promise<{ success: boolean; updated: number }> {
+  const body: Record<string, unknown> = { ids, action };
+  if (action === 'set_category') body.category_id = categoryId;
+  const { data } = await apiClient.post(`${BASE}/documents/bulk/`, body);
+  return data;
+}
+
+// ══════════════════════════════════════════════
+// Categories API
+// ══════════════════════════════════════════════
+
+/** Paginated categories (cho tab danh mục) */
+export async function getCategories(params?: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  doc_count?: string;
+}): Promise<PaginatedResponse<LandaCategory>> {
+  const { data } = await apiClient.get(`${BASE}/categories/`, { params });
+  return {
+    data: data.categories,
+    total: data.total ?? data.categories.length,
+    page: data.page ?? 1,
+    page_size: data.page_size ?? data.categories.length,
+  };
+}
+
+/** Load tất cả categories không phân trang (cho dropdown filter) */
+export async function getAllCategories(): Promise<LandaCategory[]> {
+  const { data } = await apiClient.get(`${BASE}/categories/`, { params: { page_size: 100 } });
+  return data.categories;
+}
+
+export async function createCategory(name: string): Promise<{ success: boolean; id: number; slug: string }> {
+  const { data } = await apiClient.post(`${BASE}/categories/`, { name });
+  return data;
+}
+
+export async function updateCategory(catId: number, name: string): Promise<{ success: boolean }> {
+  const { data } = await apiClient.patch(`${BASE}/categories/${catId}/`, { name });
+  return data;
+}
+
+export async function deleteCategory(catId: number): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/categories/${catId}/`);
+  return data;
+}
+
+export async function bulkDeleteCategories(ids: number[]): Promise<{ success: boolean; deleted: number }> {
+  const { data } = await apiClient.post(`${BASE}/categories/bulk/`, { ids, action: 'delete' });
+  return data;
+}
+
+// ══════════════════════════════════════════════
+// Courses API
+// ══════════════════════════════════════════════
+
+export async function getCourses(params: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  visibility?: 'all' | 'staff_only' | 'public';
+}): Promise<PaginatedResponse<LandaCourse>> {
+  const { data } = await apiClient.get(`${BASE}/courses/`, { params });
+  return {
+    data: data.courses,
+    total: data.total,
+    page: data.page,
+    page_size: data.page_size,
+  };
+}
+
+export async function updateCourse(courseId: string, updates: {
+  visible_to_staff_only?: boolean;
+  display_name?: string;
+}): Promise<{ success: boolean }> {
+  const { data } = await apiClient.patch(`${BASE}/courses/${courseId}/`, updates);
+  return data;
+}
+
+export async function bulkCourseAction(ids: string[], action: 'staff_only' | 'public'): Promise<{ success: boolean; updated: number }> {
+  const { data } = await apiClient.post(`${BASE}/courses-bulk/`, { ids, action });
+  return data;
+}
+// ══════════════════════════════════════════════
+// Report Summary API
+// ══════════════════════════════════════════════
+export interface LearnerDetailResult {
+  course_id: string;
+  course_name: string;
+  enrolled_at: string | null;
+  progress: number;
+  is_completed: boolean;
+}
+
+export interface LearnerDetailResponse {
+  username: string;
+  results: LearnerDetailResult[];
+  total_count: number;
+  total_pages: number;
+  current_page: number;
+}
+
+export const getLearnerDetail = async (username: string, page = 1, search = ''): Promise<LearnerDetailResponse> => {
+  const response = await apiClient.get(`${BASE}/learner-detail/`, {
+    params: { username, page, search, page_size: 10 }
+  });
+  return response.data;
+};
+
+export async function getReportSummary(params?: { month?: number; year?: number }): Promise<ReportSummaryResponse> {
+  const { data } = await apiClient.get<ReportSummaryResponse>(`${BASE}/report-summary/`, { params });
+  return data;
+}
+
+export async function getReportChart(year: number, metric: string): Promise<ReportChartResponse> {
+  const { data } = await apiClient.get<ReportChartResponse>(`${BASE}/report-chart/`, { params: { year, metric } });
+  return data;
+}
+
+export async function getReportTopCourses(params?: { page?: number; page_size?: number; month?: number; year?: number }): Promise<ReportPaginatedResponse<ReportTopCourse>> {
+  const { data } = await apiClient.get<ReportPaginatedResponse<ReportTopCourse>>(`${BASE}/report-top-courses/`, { params });
+  return data;
+}
+
+export async function getReportUncompletedLearners(params?: { page?: number; page_size?: number; search?: string; month?: number; year?: number }): Promise<ReportPaginatedResponse<ReportUncompletedLearner>> {
+  const { data } = await apiClient.get<ReportPaginatedResponse<ReportUncompletedLearner>>(`${BASE}/report-uncompleted-learners/`, { params });
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// User Management API
+// ─────────────────────────────────────────────────────────────────
+
+export interface LandaUser {
+  id: number;
+  username: string;
+  email: string;
+  phone: string;
+  role: 'superuser' | 'staff' | 'learner';
+  is_active: boolean;
+  date_joined: string;
+}
+
+export async function getAdminUsers(params: { page: number; page_size: number; search?: string; role?: string }): Promise<PaginatedResponse<LandaUser>> {
+  const { data } = await apiClient.get<PaginatedResponse<LandaUser>>(`${BASE}/users/`, { params });
+  // Map fields slightly as the general PaginatedResponse expects 'data' but the generic DRF might return 'results' depending on usage.
+  // Our new API returns 'results', so we map it.
+  return {
+    total: data.total,
+    page: data.page,
+    page_size: data.page_size,
+    data: (data as any).results || []
+  };
+}
+
+export async function createAdminUser(payload: Partial<LandaUser> & { password?: string }): Promise<{ success: boolean; id: number }> {
+  const { data } = await apiClient.post(`${BASE}/users/`, payload);
+  return data;
+}
+
+export async function updateAdminUser(id: number, payload: Partial<LandaUser> & { password?: string }): Promise<{ success: boolean }> {
+  const { data } = await apiClient.put(`${BASE}/users/${id}/`, payload);
+  return data;
+}
+
+
+// ── Audit Logs ──
+
+export interface AuditLog {
+  id: number;
+  actor_username: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  entity_type: string;
+  entity_name: string;
+  entity_id: string;
+  details: string;
+  ip_address: string;
+  created_at: string;
+}
+
+export interface AuditLogsParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  action?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface AuditLogsResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  results: AuditLog[];
+}
+
+export async function getAuditLogs(params: AuditLogsParams = {}): Promise<AuditLogsResponse> {
+  const cleanParams: Record<string, string | number> = {};
+  if (params.page) cleanParams.page = params.page;
+  if (params.page_size) cleanParams.page_size = params.page_size;
+  if (params.search) cleanParams.search = params.search;
+  if (params.action && params.action !== 'all') cleanParams.action = params.action;
+  if (params.date_from) cleanParams.date_from = params.date_from;
+  if (params.date_to) cleanParams.date_to = params.date_to;
+
+  const { data } = await apiClient.get<AuditLogsResponse>(`${BASE}/audit-logs/`, { params: cleanParams });
+  return data;
+}

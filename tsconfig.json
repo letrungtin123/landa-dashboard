@@ -1,0 +1,102 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    /* Path aliases */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@chatbot/*": [
+        "./src/*"
+      ],
+      "@components": [
+        "./src/components/chatbot/index.ts",
+        "./src/components/chatbot/index.tsx"
+      ],
+      "@components/*": [
+        "./src/components/chatbot/*"
+      ],
+      "@hooks": [
+        "./src/hooks/chatbot/index.ts"
+      ],
+      "@hooks/*": [
+        "./src/hooks/chatbot/*"
+      ],
+      "@context": [
+        "./src/components/providers/chatbot/index.ts"
+      ],
+      "@context/*": [
+        "./src/components/providers/chatbot/*"
+      ],
+      "@utils": [
+        "src/utils/chatbot/utils/index.ts"
+      ],
+      "@utils/*": [
+        "src/utils/chatbot/utils/*"
+      ],
+      "@assets/*": [
+        "./src/assets/chatbot/*"
+      ],
+      "@services": [
+        "./src/services/chatbot/index.ts"
+      ],
+      "@services/*": [
+        "./src/services/chatbot/*"
+      ],
+      "@styles/*": [
+        "./src/styles/chatbot/*"
+      ],
+      "@cb-types": [
+        "./src/types/chatbot/index.ts"
+      ],
+      "@cb-types/*": [
+        "./src/types/chatbot/*"
+      ],
+      "@query": [
+        "./src/queries/chatbot/index.ts"
+      ],
+      "@query/*": [
+        "./src/queries/chatbot/*"
+      ],
+      "@helpers": [
+        "src/utils/chatbot/helpers/index.ts"
+      ],
+      "@helpers/*": [
+        "src/utils/chatbot/helpers/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.mts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

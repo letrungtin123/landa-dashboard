@@ -1,0 +1,476 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-heading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   BOLD MODERN THEME — Dark Navy + Coral/Cyan Gradient
+   Inspired by: Framer, Pitch, Arc Browser
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* Light mode — Option C: Off-white with clean accents */
+  --background: #fafafa;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: color-mix(in srgb, var(--primary) 10%, transparent); /* Dùng color-mix giống Dark mode cho đồng nhất */
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: var(--primary);
+
+  --radius: 0.75rem;
+
+  /* Default gradient theme (blue) — overridden by theme-store.ts */
+  --gradient-from: #2563eb;
+  --gradient-to: #06b6d4;
+  --sidebar-active-from: #2563eb;
+  --sidebar-active-via: #38bdf8;
+  --sidebar-active-to: #06b6d4;
+
+  /* Chat bubble — muted gradient (overridden by theme-store.ts) */
+  --chat-bubble-from: #1d4fc2;
+  --chat-bubble-to: #0592aa;
+}
+
+.dark {
+  /* Dark mode — deep navy with electric accents */
+  --background: #080b16;
+  --foreground: #eef2ff;
+  --card: #0e1525;
+  --card-foreground: #eef2ff;
+  --popover: #111827;
+  --popover-foreground: #eef2ff;
+  --primary: #f97316;
+  --primary-foreground: #ffffff;
+  --secondary: #151d2e;
+  --secondary-foreground: #e2e8f0;
+  --muted: #151d2e;
+  --muted-foreground: #7c8db5;
+  --accent: #1a2338;
+  --accent-foreground: #e2e8f0;
+  --destructive: #dc2626;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: var(--primary);
+
+  --sidebar: #060912;
+  --sidebar-foreground: #cbd5e1;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: color-mix(in srgb, var(--primary) 10%, transparent);
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: var(--primary);
+
+  /* Chat bubble — darker for dark mode harmony */
+  --chat-bubble-from: #193f9a;
+  --chat-bubble-to: #047a8e;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Global cursor-pointer for interactive elements */
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="checkbox"],
+  [role="radio"],
+  [role="switch"],
+  [role="option"],
+  [role="menuitem"],
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  a[href],
+  select,
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+}
+
+/* ── Design Tokens ── */
+:root {
+  /* Shadow System — layered for depth */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.1), 0 4px 8px -4px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 24px 48px -8px rgb(0 0 0 / 0.12), 0 8px 16px -8px rgb(0 0 0 / 0.08);
+  --shadow-2xl: 0 32px 64px -16px rgb(0 0 0 / 0.2);
+  --shadow-glow: 0 0 20px -4px color-mix(in srgb, var(--primary) 25%, transparent);
+  --shadow-glow-sm: 0 0 12px -2px color-mix(in srgb, var(--primary) 20%, transparent);
+
+  /* Timing — spring-like GPU-friendly */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-medium: 200ms;
+  --duration-slow: 350ms;
+}
+
+.dark {
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25);
+  --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.5), 0 4px 8px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 24px 48px -8px rgb(0 0 0 / 0.5), 0 8px 16px -8px rgb(0 0 0 / 0.4);
+  --shadow-2xl: 0 32px 64px -16px rgb(0 0 0 / 0.7);
+  --shadow-glow: 0 0 24px -4px color-mix(in srgb, var(--primary) 30%, transparent);
+  --shadow-glow-sm: 0 0 16px -2px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+/* ── Keyframes ── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: var(--shadow-glow-sm); }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes check-pop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-6px) rotate(1deg); }
+  66% { transform: translateY(3px) rotate(-1deg); }
+}
+
+/* ── Utilities ── */
+@layer utilities {
+  .animate-in {
+    animation: slide-up 0.25s var(--ease-spring);
+  }
+
+  .animate-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .animate-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s var(--ease-in-out) infinite;
+  }
+
+  :is(.dark) .animate-shimmer::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.25s var(--ease-spring);
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.25s var(--ease-spring);
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 4s ease infinite;
+  }
+
+  .transition-smooth {
+    transition-timing-function: var(--ease-out-expo);
+    transition-duration: var(--duration-medium);
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    background: linear-gradient(135deg, #f97316, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glow border effect */
+  .border-glow {
+    position: relative;
+  }
+  .border-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #f97316, #06b6d4, #f97316);
+    background-size: 200% 200%;
+    animation: gradient-shift 4s ease infinite;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+    opacity: 0.6;
+    z-index: 1;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--foreground) 20%, transparent);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 12%, transparent) transparent;
+}
+
+/* ── NProgress Loading Bar — Gradient ── */
+#nprogress {
+  pointer-events: none;
+}
+#nprogress .bar {
+  background: linear-gradient(90deg, var(--gradient-from), var(--gradient-to));
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2.5px;
+  transition: transform 0.2s var(--ease-out-expo);
+  border-radius: 0 4px 4px 0;
+}
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0;
+  width: 80px;
+  height: 100%;
+  box-shadow: 0 0 12px var(--gradient-from), 0 0 6px var(--gradient-to);
+  opacity: 0.8;
+}
+
+
+/* Theme colors are now applied dynamically via theme-store.ts */
+
+/* ── CHATBOT CSS ── */
+.demo-container {
+    height: calc(100% - 57px) !important;
+}
+
+.scroll-custom::-webkit-scrollbar-track {
+    background-color: #f2f2f2;
+}
+
+.scroll-custom::-webkit-scrollbar {
+    width: 0.3125rem;
+    height: 0.3125rem;
+}
+.scroll-custom::-webkit-scrollbar-thumb {
+    background-color: #d0d0d0;
+    border-radius: 0.3125rem;
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.animate-fadeIn {
+    animation: fadeIn 1s ease-out;
+}
+
+/* Hiệu ứng border chạy vòng quanh */
+.animated-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    border-radius: 0.5rem;
+    background: linear-gradient(
+        120deg,
+        /* #16a34a, */ #f3f5f3,
+        #eef1ef /* #16a34a */
+    );
+    background-size: 300% 300%;
+    /* animation: border-rotate 5s linear infinite; */
+    opacity: 0;
+    transition: opacity 0.10s;
+    z-index: 0;
+}
+
+.animated-border:hover::before {
+    opacity: 1;
+}
+
+@keyframes border-rotate {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Để nội dung nằm trên layer */
+.animated-border > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Giữ editor và popup trong khung modal */
+.article-mdx-editor.mdxeditor,
+.article-mdx-editor.mdxeditor-popup-container {
+    max-height: 60vh;
+    overflow: hidden;
+}
+
+/* Cho scroll bên trong content thay vì tràn modal */
+.article-mdx-editor .mdxeditor-root-contenteditable {
+    max-height: 52vh;
+    overflow-y: auto;
+}
+
+/* Đảm bảo mọi popover/tooltip của MDXEditor nằm trong modal */
+.article-mdx-editor.mdxeditor-popup-container {
+    position: relative;
+    z-index: 60; /* cao hơn body modal 1 chút, vẫn dưới overlay */
+}
+
+/* (Optional) nếu hover link có tooltip riêng của MDXEditor */
+.article-mdx-editor .mdxeditor-tooltip {
+    display: none;
+}

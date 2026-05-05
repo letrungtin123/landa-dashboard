@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" suppressHydrationWarning>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Le & Associates" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+  <title>Le & Associates</title>
+  <script>
+    // Restore theme color CSS variables before first paint to prevent FOUC
+    try {
+      const palettes = {
+        orange: { p: '#f97316', gf: '#f97316', gt: '#06b6d4', sf: '#f97316', sv: '#06b6d4', st: '#06b6d4' },
+        blue: { p: '#2563eb', gf: '#2563eb', gt: '#06b6d4', sf: '#2563eb', sv: '#38bdf8', st: '#06b6d4' },
+        rose: { p: '#e11d48', gf: '#e11d48', gt: '#f97316', sf: '#e11d48', sv: '#fb7185', st: '#f97316' },
+        violet: { p: '#7c3aed', gf: '#7c3aed', gt: '#ec4899', sf: '#7c3aed', sv: '#a78bfa', st: '#ec4899' },
+        green: { p: '#16a34a', gf: '#16a34a', gt: '#06b6d4', sf: '#16a34a', sv: '#34d399', st: '#06b6d4' },
+        amber: { p: '#d97706', gf: '#d97706', gt: '#f97316', sf: '#d97706', sv: '#fbbf24', st: '#f97316' },
+        cyan: { p: '#0891b2', gf: '#0891b2', gt: '#2563eb', sf: '#0891b2', sv: '#22d3ee', st: '#2563eb' },
+        pink: { p: '#db2777', gf: '#db2777', gt: '#7c3aed', sf: '#db2777', sv: '#f472b6', st: '#7c3aed' },
+        emerald: { p: '#059669', gf: '#059669', gt: '#0891b2', sf: '#059669', sv: '#34d399', st: '#0891b2' },
+        indigo: { p: '#4f46e5', gf: '#4f46e5', gt: '#06b6d4', sf: '#4f46e5', sv: '#818cf8', st: '#06b6d4' },
+        cherry: { p: '#be123c', gf: '#be123c', gt: '#d97706', sf: '#be123c', sv: '#fb7185', st: '#d97706' },
+      };
+      const s = localStorage.getItem('theme-color');
+      const c = s ? JSON.parse(s).state.themeColor : 'blue';
+      const t = palettes[c];
+      if (t) {
+        const d = document.documentElement;
+        d.style.setProperty('--primary', t.p);
+        d.style.setProperty('--ring', t.p);
+        d.style.setProperty('--gradient-from', t.gf);
+        d.style.setProperty('--gradient-to', t.gt);
+        d.style.setProperty('--sidebar-active-from', t.sf);
+        d.style.setProperty('--sidebar-active-via', t.sv);
+        d.style.setProperty('--sidebar-active-to', t.st);
+        d.setAttribute('data-theme-color', c);
+      }
+    } catch (e) { }
+  </script>
+</head>
+
+<body class="antialiased" suppressHydrationWarning>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>
