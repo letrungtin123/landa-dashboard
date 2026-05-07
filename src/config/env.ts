@@ -33,6 +33,7 @@ function requireUrl(key: string): string {
 
 export const config = {
   lmsBaseUrl: requireUrl("VITE_OPENEDX_LMS_URL"),
+  cmsBaseUrl: requireUrl("VITE_OPENEDX_CMS_URL"),
   clientId: requireEnv("VITE_OPENEDX_CLIENT_ID"),
   clientSecret: requireEnv("VITE_OPENEDX_CLIENT_SECRET"),
   tokenRefreshBufferMs: requireEnvNumber("VITE_TOKEN_REFRESH_BUFFER_MS", 300_000),

@@ -37,6 +37,13 @@ apiClient.interceptors.request.use(async (req) => {
     const csrf = getCsrfToken();
     if (csrf) req.headers["X-CSRFToken"] = csrf;
   }
+
+  // Chuyển hướng các request tới CMS API trong môi trường production
+  if (!import.meta.env.DEV && req.url?.startsWith('/cms-api/')) {
+    req.baseURL = config.cmsBaseUrl;
+    req.url = req.url.replace(/^\/cms-api/, '');
+  }
+
   return req;
 });
 
