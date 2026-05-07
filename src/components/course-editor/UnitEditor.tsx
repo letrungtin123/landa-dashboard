@@ -3,9 +3,9 @@
  * Hỗ trợ: video, html, problem (5 dạng), la_crossword, la_sortable
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getUnitChildren, createXBlock, updateXBlock, deleteXBlock, studioSubmit, getBlockInfo,
+  getUnitChildren, createXBlock, updateXBlock, deleteXBlock, studioSubmit, getBlockInfo, publishBlock,
 } from '@/api/course-authoring';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import {
   Trash2, GripVertical, Plus, Video, Type, HelpCircle,
-  Save, Edit2, ChevronDown, Puzzle, List, Check, X
+  Save, Edit2, ChevronDown, Puzzle, List, Check, X, Network
 } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoEditor from './editors/VideoEditor';
@@ -31,6 +31,8 @@ import ProblemEditor, { PROBLEM_TYPES, parseProblemXml } from './editors/Problem
 import CrosswordEditor, { CrosswordWord } from './editors/CrosswordEditor';
 import SortableEditor, { SortableItem } from './editors/SortableEditor';
 import { CrosswordPreviewInteractive } from './CrosswordPreview';
+import DiagramPreviewInteractive from './editors/diagram/DiagramPreviewInteractive';
+import DiagramEditor, { DiagramXBlockData } from './editors/DiagramEditor';
 
 const LMS_BASE = (import.meta as any).env?.VITE_OPENEDX_LMS_URL || 'http://local.openedx.io';
 
@@ -81,6 +83,11 @@ const COMPONENT_TYPES: ComponentType[] = [
     id: 'la_sortable', category: 'la_sortable', label: 'Sắp xếp', desc: 'Kéo thả thứ tự',
     icon: <List className="h-6 w-6" />,
     colorClass: 'border-violet-200 bg-violet-50 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/30 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300',
+  },
+  {
+    id: 'la_diagram', category: 'la_diagram', label: 'Biểu đồ', desc: 'Sơ đồ tổ chức, Mindmap...',
+    icon: <Network className="h-6 w-6" />,
+    colorClass: 'border-orange-200 bg-orange-50 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950/30 dark:hover:bg-orange-900/40 text-orange-700 dark:text-orange-300',
   },
 ];
 
@@ -328,7 +335,7 @@ function ComponentCard({ block, courseId, onDelete, onSaved }: {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Hủy</AlertDialogCancel>
-                <AlertDialogAction 
+                <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={() => delMut.mutate()}
                 >
@@ -352,8 +359,21 @@ function ComponentCard({ block, courseId, onDelete, onSaved }: {
         )}
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
+      {/* Fullscreen Editor for Diagram */}
+      {isEditing && block.block_type === 'la_diagram' && (
+        <div className="fixed inset-0 z-[9999] bg-background w-screen h-screen overflow-hidden flex flex-col">
+          <ComponentEditForm
+            key={blockId}
+            blockInfo={blockData}
+            courseId={courseId}
+            onSaved={handleSaved}
+            onCancel={() => setIsEditing(false)}
+          />
+        </div>
+      )}
+
+      {/* Edit Dialog for Normal Components */}
+      <Dialog open={isEditing && block.block_type !== 'la_diagram'} onOpenChange={setIsEditing}>
         <DialogContent className="w-[95vw] sm:max-w-7xl max-h-[92vh] flex flex-col overflow-hidden p-0">
           <DialogHeader className="px-6 py-4 border-b bg-muted/20 shrink-0">
             <DialogTitle className="text-lg font-bold">
@@ -376,6 +396,7 @@ function ComponentCard({ block, courseId, onDelete, onSaved }: {
                 blockInfo={blockData}
                 courseId={courseId}
                 onSaved={handleSaved}
+                onCancel={() => setIsEditing(false)}
               />
             )}
           </div>
@@ -427,7 +448,7 @@ function SortablePreviewInteractive({ parsed, questionText }: { parsed: any, que
   return (
     <div className="border border-border rounded-xl p-5 bg-card space-y-5">
       {questionText && <p className="text-[15px] prose dark:prose-invert max-w-none">{questionText}</p>}
-      
+
       <div className="space-y-2 mt-4">
         {items.map((item, idx) => {
           const isItemCorrect = item.id === correctItems[idx]?.id;
@@ -435,7 +456,7 @@ function SortablePreviewInteractive({ parsed, questionText }: { parsed: any, que
           if (submitted) {
             borderClass = isItemCorrect ? "border-green-500 bg-green-500/10" : "border-red-500 bg-red-500/10";
           }
-          
+
           return (
             <div
               key={item.id}
@@ -456,7 +477,7 @@ function SortablePreviewInteractive({ parsed, questionText }: { parsed: any, que
               </div>
               {submitted && (
                 <div className="shrink-0">
-                   {isItemCorrect ? <Check className="w-5 h-5 text-green-500 stroke-[3]" /> : <X className="w-5 h-5 text-red-500 stroke-[3]" />}
+                  {isItemCorrect ? <Check className="w-5 h-5 text-green-500 stroke-[3]" /> : <X className="w-5 h-5 text-red-500 stroke-[3]" />}
                 </div>
               )}
             </div>
@@ -465,15 +486,15 @@ function SortablePreviewInteractive({ parsed, questionText }: { parsed: any, que
       </div>
 
       <div className="pt-2 flex items-center justify-between border-t border-border/50">
-        <Button 
-          variant={submitted ? "outline" : "default"} 
+        <Button
+          variant={submitted ? "outline" : "default"}
           className="min-w-[120px] font-semibold"
           onClick={() => {
             if (submitted) {
-               setSubmitted(false);
-               setItems([...correctItems].sort(() => Math.random() - 0.5));
+              setSubmitted(false);
+              setItems([...correctItems].sort(() => Math.random() - 0.5));
             } else {
-               setSubmitted(true);
+              setSubmitted(true);
             }
           }}
         >
@@ -499,13 +520,13 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
   switch (blockType) {
     case 'video': {
       let ytId = blockData?.metadata?.youtube_id_1_0 || blockData?.data?.youtube_id_1_0;
-      
+
       // Fallback extraction from XML data if it's stored in XML block
       if (!ytId && typeof blockData?.data === 'string') {
         const xmlMatch = blockData.data.match(/youtube_id_1_0="([^"]+)"/);
         if (xmlMatch) ytId = xmlMatch[1];
       }
-      
+
       // Open edX default video ID if no ID is found
       if (!ytId) ytId = '3_yD_cEKoCk';
 
@@ -578,7 +599,7 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
     case 'problem': {
       const xml = blockData?.data || '';
       const parsed = parseProblemXml(xml);
-      
+
       if (!parsed) {
         const trimmed = xml.trim().replace(/<\/?problem>/g, '').trim();
         return trimmed ? (
@@ -609,6 +630,21 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
       const qt = blockData?.metadata?.question_text || blockData?.question_text || '';
       return <SortablePreviewInteractive parsed={parsed} questionText={qt} />;
     }
+    case 'la_diagram': {
+      const parsed = parseMaybeJson(blockData?.metadata?.diagram_data || blockData?.diagram_data);
+      
+      if (!parsed || !parsed.diagrams || parsed.diagrams.length === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground gap-3">
+            <div className="p-3 bg-background rounded-full shadow-sm">
+              <Network className="h-6 w-6 text-muted-foreground/60" />
+            </div>
+            <span className="text-sm font-medium">Diagram — hover để Edit sơ đồ</span>
+          </div>
+        );
+      }
+      return <DiagramPreviewInteractive data={parsed} />;
+    }
 
     default:
       return (
@@ -623,7 +659,7 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
   const isMulti = parsed.type === 'choiceresponse';
   const isInput = parsed.type === 'numericalresponse' || parsed.type === 'stringresponse';
   const isDropdown = parsed.type === 'optionresponse';
-  
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [inputValue, setInputValue] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -649,22 +685,22 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
   let isCorrect = false;
   if (submitted) {
     if (isInput) {
-       const correctAnswers = parsed.choices.map((c: any) => c.html);
-       if (parsed.type === 'numericalresponse') {
-          // Simple parsing for tolerance/preview, ignoring actual tolerance for now as it can be complex (e.g. 5%)
-          isCorrect = correctAnswers.some((ans: string) => Math.abs(parseFloat(ans) - parseFloat(inputValue)) <= 0.0001); 
-       } else {
-          isCorrect = correctAnswers.some((ans: string) => ans.toLowerCase().trim() === inputValue.toLowerCase().trim());
-       }
+      const correctAnswers = parsed.choices.map((c: any) => c.html);
+      if (parsed.type === 'numericalresponse') {
+        // Simple parsing for tolerance/preview, ignoring actual tolerance for now as it can be complex (e.g. 5%)
+        isCorrect = correctAnswers.some((ans: string) => Math.abs(parseFloat(ans) - parseFloat(inputValue)) <= 0.0001);
+      } else {
+        isCorrect = correctAnswers.some((ans: string) => ans.toLowerCase().trim() === inputValue.toLowerCase().trim());
+      }
     } else if (isDropdown) {
-       const correctChoice = parsed.choices.find((c: any) => c.correct);
-       isCorrect = inputValue === correctChoice?.html;
+      const correctChoice = parsed.choices.find((c: any) => c.correct);
+      isCorrect = inputValue === correctChoice?.html;
     } else {
       const correctIds = new Set(parsed.choices.filter((c: any) => c.correct).map((c: any) => c.id));
       if (isMulti) {
-         isCorrect = selected.size === correctIds.size && [...selected].every(id => correctIds.has(id));
+        isCorrect = selected.size === correctIds.size && [...selected].every(id => correctIds.has(id));
       } else {
-         isCorrect = selected.size === 1 && correctIds.has([...selected][0]);
+        isCorrect = selected.size === 1 && correctIds.has([...selected][0]);
       }
     }
   }
@@ -674,12 +710,12 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
       <div className="text-[13px] text-muted-foreground">
         {submitted ? `${isCorrect ? weight.toFixed(1) : '0.0'}/${weight.toFixed(1)} point (graded)` : `0.0/${weight.toFixed(1)} point (ungraded)`}
       </div>
-      
-      <div 
-        className="text-[15px] prose dark:prose-invert max-w-none [&_p]:m-0" 
-        dangerouslySetInnerHTML={{ __html: rewriteHtml(parsed.questionHtml) }} 
+
+      <div
+        className="text-[15px] prose dark:prose-invert max-w-none [&_p]:m-0"
+        dangerouslySetInnerHTML={{ __html: rewriteHtml(parsed.questionHtml) }}
       />
-      
+
       {isInput ? (
         <div className="mt-4 flex items-center gap-3">
           <input
@@ -699,12 +735,12 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
         </div>
       ) : isDropdown ? (
         <div className="mt-4 flex items-center gap-3">
-          <Select 
-            value={inputValue} 
-            onValueChange={setInputValue} 
+          <Select
+            value={inputValue}
+            onValueChange={setInputValue}
             disabled={submitted}
           >
-            <SelectTrigger 
+            <SelectTrigger
               className={`w-full h-10 ${submitted ? (isCorrect ? 'border-green-500 bg-green-500/10 text-green-900 dark:text-green-200' : 'border-red-500 bg-red-500/10 text-red-900 dark:text-red-200') : 'border-input bg-background'}`}
             >
               <SelectValue placeholder="Select an option" />
@@ -736,8 +772,8 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
             }
 
             return (
-              <div 
-                key={choice.id} 
+              <div
+                key={choice.id}
                 className={`flex items-start gap-3 p-3 rounded-md border bg-background cursor-pointer transition-colors ${borderClass} hover:bg-muted/50`}
                 onClick={(e) => { e.stopPropagation(); toggleChoice(choice.id); }}
               >
@@ -748,7 +784,7 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
                     )}
                   </div>
                 </div>
-                <div 
+                <div
                   className="flex-1 text-[15px] prose dark:prose-invert max-w-none [&_p]:m-0 leading-tight"
                   dangerouslySetInnerHTML={{ __html: rewriteHtml(choice.html) }}
                 />
@@ -766,11 +802,11 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
           })}
         </div>
       )}
-      
+
       {submitted && parsed.explanationHtml && (
         <div className="mt-4 p-4 rounded-md bg-muted/40 border border-border">
           <div className="font-semibold text-sm mb-2">Giải thích:</div>
-          <div 
+          <div
             className="text-[14px] prose dark:prose-invert max-w-none [&_p]:m-0"
             dangerouslySetInnerHTML={{ __html: rewriteHtml(parsed.explanationHtml) }}
           />
@@ -780,25 +816,25 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
       {showHint && parsed.hints.length > 0 && (
         <div className="mt-4 space-y-2">
           {parsed.hints.map((hint: string, i: number) => (
-             <div key={i} className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-sm text-amber-900 dark:text-amber-200">
-               <span className="font-semibold mr-2">Gợi ý {i+1}:</span> {hint}
-             </div>
+            <div key={i} className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-sm text-amber-900 dark:text-amber-200">
+              <span className="font-semibold mr-2">Gợi ý {i + 1}:</span> {hint}
+            </div>
           ))}
         </div>
       )}
-      
+
       <div className="flex justify-between items-center mt-6">
-        <Button 
-          variant={submitted ? "secondary" : "default"} 
-          size="sm" 
-          onClick={(e) => { 
-            e.stopPropagation(); 
+        <Button
+          variant={submitted ? "secondary" : "default"}
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
             if (submitted) {
               setSubmitted(false);
               setSelected(new Set());
               setInputValue('');
             } else {
-              handleSubmit(); 
+              handleSubmit();
             }
           }}
           disabled={(isInput || isDropdown ? inputValue.trim().length === 0 : selected.size === 0) && !submitted}
@@ -806,9 +842,9 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
           {submitted ? "Làm lại (Retry)" : "Submit"}
         </Button>
         {parsed.hints.length > 0 && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="text-sm font-medium bg-muted/50 hover:bg-muted"
             onClick={(e) => { e.stopPropagation(); setShowHint(true); }}
             disabled={showHint}
@@ -823,10 +859,11 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
 
 // ─── ComponentEditForm ────────────────────────────────────────────────────────
 
-function ComponentEditForm({ blockInfo, courseId, onSaved }: {
+function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
   blockInfo: any;
   courseId?: string;
   onSaved: () => void;
+  onCancel: () => void;
 }) {
   const category = blockInfo?.category || blockInfo?.block_type || '';
 
@@ -873,6 +910,12 @@ function ComponentEditForm({ blockInfo, courseId, onSaved }: {
     return Array.isArray(parsed.items) ? parsed.items : [];
   });
 
+  const [diagramData, setDiagramData] = useState<DiagramXBlockData>(() => {
+    const raw = blockInfo?.metadata?.diagram_data || blockInfo?.diagram_data;
+    const parsed = parseMaybeJson(raw);
+    return parsed || { diagrams: [], start_diagram_id: '' };
+  });
+
   const saveMut = useMutation({
     mutationFn: async () => {
       const id = blockInfo?.id;
@@ -907,6 +950,12 @@ function ComponentEditForm({ blockInfo, courseId, onSaved }: {
           display_name: displayName,
           question_text: soQuestionText,
           sortable_data: JSON.stringify({ items: soItems }),
+        });
+      }
+      if (category === 'la_diagram') {
+        return studioSubmit(id, {
+          display_name: displayName,
+          diagram_data: JSON.stringify(diagramData),
         });
       }
       return updateXBlock(id, { metadata: { display_name: displayName } });
@@ -967,6 +1016,18 @@ function ComponentEditForm({ blockInfo, courseId, onSaved }: {
             onItemsChange={setSoItems}
           />
         );
+      case 'la_diagram':
+        return (
+          <DiagramEditor
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+            diagramData={diagramData}
+            onDiagramDataChange={setDiagramData}
+            onSave={() => saveMut.mutate()}
+            onCancel={onCancel}
+            isSaving={saveMut.isPending}
+          />
+        );
       default:
         return (
           <div className="space-y-2">
@@ -983,6 +1044,10 @@ function ComponentEditForm({ blockInfo, courseId, onSaved }: {
         );
     }
   };
+
+  if (category === 'la_diagram') {
+    return renderEditor();
+  }
 
   return (
     <div className="space-y-5">

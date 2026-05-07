@@ -16,10 +16,12 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import {
-  BookOpen, Eye, EyeOff, GraduationCap, Globe, ShieldAlert, Edit2, Plus, ImagePlus, Loader2, LayoutTemplate, ArrowRight
+  BookOpen, GraduationCap, Globe, Edit2, Plus, ImagePlus, Loader2, LayoutTemplate, ArrowRight, FolderOpen, Archive, ArchiveRestore
 } from 'lucide-react';
+import { CourseFilesModal } from '@/components/course-editor/CourseFilesModal';
 
 export default function CoursesPage() {
   useHeaderInfo('Courses');
@@ -32,6 +34,7 @@ export default function CoursesPage() {
   const [limit, setLimit] = useState(20);
   const [selected, setSelected] = useState<string[]>([]);
   const [previewCourse, setPreviewCourse] = useState<LandaCourse | null>(null);
+  const [selectedCourseFiles, setSelectedCourseFiles] = useState<string | null>(null);
 
   // --- Tạo course mới ---
   const [showCreate, setShowCreate] = useState(false);
@@ -141,7 +144,7 @@ export default function CoursesPage() {
     onSuccess: (result, { action }) => {
       queryClient.invalidateQueries({ queryKey: ['landa-courses'] });
       setSelected([]);
-      toast.success(`Đã chuyển ${result.updated} khóa học sang ${action === 'public' ? 'công khai' : 'chỉ staff'}`);
+      toast.success(`Đã chuyển ${result.updated} khóa học sang trạng thái ${action === 'public' ? 'hiển thị' : 'lưu trữ'}`);
     },
     onError: () => toast.error('Cập nhật hàng loạt thất bại'),
   });
@@ -249,10 +252,10 @@ export default function CoursesPage() {
         filters={[
           {
             key: 'visibility',
-            placeholder: 'Hiển thị',
+            placeholder: 'Trạng thái',
             options: [
-              { value: 'public', label: 'Công khai' },
-              { value: 'staff_only', label: 'Chỉ Staff' },
+              { value: 'public', label: 'Đang hoạt động' },
+              { value: 'staff_only', label: 'Đã lưu trữ' },
             ],
           },
         ]}
@@ -266,10 +269,10 @@ export default function CoursesPage() {
             {selected.length > 0 && (
               <>
                 <Button size="sm" variant="outline" onClick={() => bulkMut.mutate({ action: 'public' })} className="h-8 text-xs">
-                  <Globe className="mr-1 h-3.5 w-3.5" /> Công khai ({selected.length})
+                  <Globe className="mr-1 h-3.5 w-3.5" /> Hiển thị ({selected.length})
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => bulkMut.mutate({ action: 'staff_only' })} className="h-8 text-xs">
-                  <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Chỉ Staff ({selected.length})
+                <Button size="sm" variant="outline" onClick={() => bulkMut.mutate({ action: 'staff_only' })} className="h-8 text-xs text-slate-600">
+                  <Archive className="mr-1 h-3.5 w-3.5" /> Lưu trữ ({selected.length})
                 </Button>
               </>
             )}
@@ -280,8 +283,9 @@ export default function CoursesPage() {
         }
       />
 
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <TooltipProvider delayDuration={300}>
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-muted/10">
               <TableRow className="hover:bg-transparent border-border">
@@ -290,7 +294,7 @@ export default function CoursesPage() {
                 </TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Khóa học</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Tổ chức</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Hiển thị</TableHead>
+                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Trạng thái</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Bắt đầu</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Kết thúc</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Cập nhật</TableHead>
@@ -342,44 +346,76 @@ export default function CoursesPage() {
                       <Badge
                         variant="outline"
                         className={course.visible_to_staff_only
-                          ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+                          ? 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700/50'
                           : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
                         }
                       >
-                        {course.visible_to_staff_only ? 'Staff Only' : 'Public'}
+                        {course.visible_to_staff_only ? 'Đã lưu trữ' : 'Đang hoạt động'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{course.start}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{course.end}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{course.modified}</TableCell>
                     <TableCell className="text-right pr-5 flex justify-end gap-1">
-                      <Button variant="ghost" size="icon"
-                        onClick={() => setPreviewCourse(course)}
-                        className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/30"
-                        title="Xem preview Card"
-                      >
-                        <LayoutTemplate className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon"
-                        onClick={() => triggerUpload(course.id)}
-                        disabled={uploadingCourseId === course.id}
-                        className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
-                        title="Đổi ảnh đại diện"
-                      >
-                        {uploadingCourseId === course.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                      </Button>
-                      <Button variant="ghost" size="icon"
-                        onClick={() => toggleVis.mutate({ id: course.id, visible: !course.visible_to_staff_only })}
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title={course.visible_to_staff_only ? 'Chuyển sang Public' : 'Chuyển sang Staff Only'}
-                      >
-                        {course.visible_to_staff_only ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                      </Button>
-                      <Link to={`/courses/${course.id}/edit`}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10" title="Chỉnh sửa (Studio)">
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon"
+                            onClick={() => setPreviewCourse(course)}
+                            className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/30"
+                          >
+                            <LayoutTemplate className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Xem preview Card</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon"
+                            onClick={() => triggerUpload(course.id)}
+                            disabled={uploadingCourseId === course.id}
+                            className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
+                          >
+                            {uploadingCourseId === course.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Đổi ảnh đại diện</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon"
+                            onClick={() => setSelectedCourseFiles(course.id)}
+                            className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/30"
+                          >
+                            <FolderOpen className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Quản lý File (Files & Uploads)</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon"
+                            onClick={() => toggleVis.mutate({ id: course.id, visible: !course.visible_to_staff_only })}
+                            className={`h-8 w-8 ${course.visible_to_staff_only ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-500 dark:hover:bg-amber-950/30' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/50'}`}
+                          >
+                            {course.visible_to_staff_only ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{course.visible_to_staff_only ? 'Khôi phục hiển thị' : 'Lưu trữ khóa học'}</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link to={`/courses/${course.id}/edit`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10">
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>Chỉnh sửa nội dung</TooltipContent>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))
@@ -388,8 +424,15 @@ export default function CoursesPage() {
           </Table>
         </div>
 
-        <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={setLimit} label="khóa học" />
-      </div>
+          <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={setLimit} label="khóa học" />
+        </div>
+      </TooltipProvider>
+
+      <CourseFilesModal 
+        isOpen={!!selectedCourseFiles} 
+        onClose={() => setSelectedCourseFiles(null)} 
+        courseId={selectedCourseFiles || ''} 
+      />
     </div>
   );
 }

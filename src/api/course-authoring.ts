@@ -68,6 +68,28 @@ export interface UnitChildrenResponse {
   }[];
 }
 
+export interface CourseAsset {
+  id: string;
+  display_name: string;
+  content_type: string;
+  date_added: string;
+  url: string;
+  external_url: string;
+  portable_url: string;
+  thumbnail?: string;
+  locked: boolean;
+  file_size?: number;
+}
+
+export interface CourseAssetsResponse {
+  start: number;
+  end: number;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  assets: CourseAsset[];
+}
+
 export interface Course {
   id: string;
   display_name: string;
@@ -270,6 +292,53 @@ export async function studioSubmit(blockId: string, payload: any): Promise<any> 
   const { data } = await apiClient.post(
     `/cms-api/landa-admin/api/authoring/xblock/${blockId}/handler/studio_submit`,
     payload,
+    { headers: cmsHeaders() }
+  );
+  return data;
+}
+
+// ─────────────────────────────────────────────
+// Assets API (Files & Uploads)
+// ─────────────────────────────────────────────
+
+export async function getCourseAssets(courseId: string, page = 0, pageSize = 50, textSearch = '', assetType = ''): Promise<CourseAssetsResponse> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    page_size: pageSize.toString(),
+    sort: 'date_added',
+    direction: 'desc',
+  });
+  if (textSearch) params.append('text_search', textSearch);
+  if (assetType) params.append('asset_type', assetType);
+
+  const { data } = await apiClient.get(
+    `/cms-api/landa-admin/api/authoring/assets/${encodeURIComponent(courseId)}/?${params.toString()}`
+  );
+  return data;
+}
+
+export async function uploadCourseAsset(courseId: string, file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await apiClient.post(
+    `/cms-api/landa-admin/api/authoring/assets/${encodeURIComponent(courseId)}/`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data', ...cmsHeaders() } }
+  );
+  return data;
+}
+
+export async function deleteCourseAsset(courseId: string, assetId: string): Promise<void> {
+  await apiClient.delete(
+    `/cms-api/landa-admin/api/authoring/assets/${encodeURIComponent(courseId)}/${encodeURIComponent(assetId)}`,
+    { headers: cmsHeaders() }
+  );
+}
+
+export async function updateCourseAssetLock(courseId: string, assetId: string, locked: boolean): Promise<any> {
+  const { data } = await apiClient.put(
+    `/cms-api/landa-admin/api/authoring/assets/${encodeURIComponent(courseId)}/${encodeURIComponent(assetId)}`,
+    { locked },
     { headers: cmsHeaders() }
   );
   return data;
