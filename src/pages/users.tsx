@@ -6,7 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Users as UsersIcon, ShieldAlert } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users as UsersIcon, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserFormDialog } from '@/components/users/user-form-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
   inactive: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20',
+  pending: 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -36,6 +37,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<LandaUser | undefined>();
   const [page, setPage] = useState(1);
@@ -50,7 +52,7 @@ export default function UsersPage() {
   const canAdd = hasPermission('account', 'general', 'can_add') || true; // Currently assumed true for staff/superuser
 
   useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { setPage(1); }, [debouncedSearch, roleFilter, limit]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, roleFilter, statusFilter, limit]);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin-users', page, limit, debouncedSearch, roleFilter],
@@ -75,9 +77,30 @@ export default function UsersPage() {
     }
   });
 
-  const users = data?.data ?? [];
+  const approveMutation = useMutation({
+    mutationFn: (id: number) => updateAdminUser(id, { is_active: true }),
+    onSuccess: () => {
+      toast.success('Account approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to approve user');
+    }
+  });
+
+  const rawUsers = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit) || 1;
+
+  // Client-side status filter (API chưa hỗ trợ filter is_active)
+  const users = statusFilter === 'all'
+    ? rawUsers
+    : rawUsers.filter((u) => {
+        if (statusFilter === 'pending') return !u.is_active && u.role === 'learner';
+        if (statusFilter === 'active') return u.is_active;
+        if (statusFilter === 'inactive') return !u.is_active && u.role !== 'learner';
+        return true;
+      });
 
   const handleDeactivate = (user: LandaUser) => {
     confirmDialog({
@@ -106,12 +129,22 @@ export default function UsersPage() {
               { value: 'learner', label: 'Learner' },
             ],
           },
+          {
+            key: 'status',
+            placeholder: 'Status',
+            options: [
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+              { value: 'pending', label: 'Chờ duyệt' },
+            ],
+          },
         ]}
-        filterValues={{ role: roleFilter }}
+        filterValues={{ role: roleFilter, status: statusFilter }}
         onFilterChange={(key, val) => {
           if (key === 'role') setRoleFilter(val);
+          if (key === 'status') setStatusFilter(val);
         }}
-        onReset={() => { setSearch(''); setRoleFilter('all'); }}
+        onReset={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all'); }}
         actions={
           canAdd && (
             <Button onClick={() => { setSelectedUser(undefined); setIsDialogOpen(true); }} className="shadow-sm">
@@ -159,6 +192,7 @@ export default function UsersPage() {
               ) : (
                 users.map((u) => {
                   const statusKey = u.is_active ? 'active' : 'inactive';
+                  const displayStatus = !u.is_active && u.role === 'learner' ? 'pending' : statusKey;
                   
                   // Role-based actions logic
                   let canEditDelete = true;
@@ -190,8 +224,8 @@ export default function UsersPage() {
                         {u.phone || <span className="text-muted-foreground/40">—</span>}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`font-medium shadow-none font-sans ${STATUS_COLORS[statusKey]}`}>
-                          <span className="capitalize">{statusKey}</span>
+                        <Badge variant="outline" className={`font-medium shadow-none font-sans ${STATUS_COLORS[displayStatus]}`}>
+                          <span className="capitalize">{displayStatus === 'pending' ? 'Chờ duyệt' : statusKey}</span>
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
@@ -205,6 +239,13 @@ export default function UsersPage() {
                             </span>
                           ) : (
                             <>
+                              {displayStatus === 'pending' && (
+                                <Button variant="ghost" size="icon" onClick={() => approveMutation.mutate(u.id)}
+                                  disabled={approveMutation.isPending}
+                                  className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30 transition-colors rounded-md" title="Duyệt tài khoản">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                               <Button variant="ghost" size="icon" onClick={() => { setSelectedUser(u); setIsDialogOpen(true); }}
                                 className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-md" title="Edit User">
                                 <Pencil className="h-3.5 w-3.5" />

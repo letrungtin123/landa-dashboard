@@ -49,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: 'User',
     items: [
       { title: 'Users', url: '/accounts', module: 'account', fallbackIcon: 'Users' },
+      { title: 'Groups', url: '/groups', module: 'groups', fallbackIcon: 'FolderTree' },
       { title: 'Audit Logs', url: '/audit-logs', module: 'audit_log', fallbackIcon: 'ScrollText' },
     ],
   },
