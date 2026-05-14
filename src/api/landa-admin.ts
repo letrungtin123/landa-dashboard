@@ -258,6 +258,28 @@ export async function updateCourseModalConfig(courseId: string, config: Partial<
   return data;
 }
 
+// ── Section Modal Config (cấu hình modal khích lệ per-section) ──
+
+export interface SectionModalConfig {
+  section_id: string;
+  enabled: boolean;
+  title: string;
+  description: string;
+  updated_at?: string | null;
+}
+
+export async function getSectionModalConfig(courseId: string, sectionId: string): Promise<SectionModalConfig> {
+  const { data } = await apiClient.get(`${BASE}/courses/${courseId}/section-modal-config/`, {
+    params: { section_id: sectionId }
+  });
+  return data;
+}
+
+export async function updateSectionModalConfig(courseId: string, config: SectionModalConfig): Promise<{ success: boolean }> {
+  const { data } = await apiClient.put(`${BASE}/courses/${courseId}/section-modal-config/`, config);
+  return data;
+}
+
 // ── Course Notification ──
 
 export async function sendCourseNotification(courseId: string, payload: {

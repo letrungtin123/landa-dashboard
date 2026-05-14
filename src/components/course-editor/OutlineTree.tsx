@@ -26,6 +26,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Sparkles } from 'lucide-react';
+import { getSectionModalConfig, updateSectionModalConfig, type SectionModalConfig } from '@/api/landa-admin';
 
 interface OutlineTreeProps {
   courseId: string;
@@ -66,6 +71,7 @@ export default function OutlineTree({ courseId, onSelectUnit, selectedUnitId }: 
         <SectionNode
           key={section.id}
           node={section}
+          courseId={courseId}
           onSelectUnit={onSelectUnit}
           selectedUnitId={selectedUnitId}
           onStructureChange={() => refetch()}
@@ -85,8 +91,9 @@ export default function OutlineTree({ courseId, onSelectUnit, selectedUnitId }: 
 // Section Node
 // ─────────────────────────────────────────────
 
-function SectionNode({ node, onSelectUnit, selectedUnitId, onStructureChange }: {
+function SectionNode({ node, courseId, onSelectUnit, selectedUnitId, onStructureChange }: {
   node: CourseIndexSection;
+  courseId: string;
   onSelectUnit: (id: string) => void;
   selectedUnitId: string | null;
   onStructureChange: () => void;
@@ -97,6 +104,7 @@ function SectionNode({ node, onSelectUnit, selectedUnitId, onStructureChange }: 
     <div>
       <NodeRow
         node={node}
+        courseId={courseId}
         depth={0}
         icon={<Folder className="h-4 w-4 text-amber-500" />}
         expanded={expanded}
@@ -205,8 +213,9 @@ function UnitNode({ node, isSelected, onSelect, onStructureChange }: {
 // Generic Node Row
 // ─────────────────────────────────────────────
 
-function NodeRow({ node, depth, icon, expanded, onToggle, isSelectable, isSelected, onStructureChange }: {
+function NodeRow({ node, courseId, depth, icon, expanded, onToggle, isSelectable, isSelected, onStructureChange }: {
   node: CourseIndexSection;
+  courseId?: string;
   depth: number;
   icon: React.ReactNode;
   expanded: boolean;
@@ -299,6 +308,8 @@ function NodeRow({ node, depth, icon, expanded, onToggle, isSelectable, isSelect
         <div className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
           <NodeActions
             node={node}
+            courseId={courseId}
+            depth={depth}
             onRename={() => { setIsRenaming(true); setRenameValue(node.display_name); }}
             onStructureChange={onStructureChange}
           />
@@ -312,12 +323,15 @@ function NodeRow({ node, depth, icon, expanded, onToggle, isSelectable, isSelect
 // Node Actions Dropdown
 // ─────────────────────────────────────────────
 
-function NodeActions({ node, onRename, onStructureChange }: {
+function NodeActions({ node, courseId, depth, onRename, onStructureChange }: {
   node: CourseIndexSection;
+  courseId?: string;
+  depth?: number;
   onRename: () => void;
   onStructureChange: () => void;
 }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSectionModal, setShowSectionModal] = useState(false);
 
   const delMut = useMutation({
     mutationFn: () => deleteBlock(node.id),
@@ -339,10 +353,15 @@ function NodeActions({ node, onRename, onStructureChange }: {
             <MoreVertical className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={onRename}>
             <Pencil className="h-3.5 w-3.5 mr-2" /> Đổi tên
           </DropdownMenuItem>
+          {depth === 0 && (
+            <DropdownMenuItem onClick={() => setShowSectionModal(true)}>
+              <Sparkles className="h-3.5 w-3.5 mr-2" /> Modal khích lệ
+            </DropdownMenuItem>
+          )}
           {(!node.published || node.has_changes) && (
             <DropdownMenuItem onClick={() => publishMut.mutate()}>
               <Globe className="h-3.5 w-3.5 mr-2" /> Publish
@@ -376,6 +395,16 @@ function NodeActions({ node, onRename, onStructureChange }: {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showSectionModal && courseId && (
+        <SectionModalConfigDialog
+          courseId={courseId}
+          sectionId={node.id}
+          sectionName={node.display_name}
+          open={showSectionModal}
+          onClose={() => setShowSectionModal(false)}
+        />
+      )}
     </>
   );
 }
@@ -440,5 +469,123 @@ function AddNodeButton({ parentId, category, label, onStructureChange, small = f
       <Plus className="h-3 w-3" />
       {label}
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Section Modal Config Dialog
+// ─────────────────────────────────────────────
+
+function SectionModalConfigDialog({ courseId, sectionId, sectionName, open, onClose }: {
+  courseId: string;
+  sectionId: string;
+  sectionName: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<Partial<SectionModalConfig>>({
+    enabled: false,
+    title: '',
+    description: '',
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['section-modal-config', courseId, sectionId],
+    queryFn: () => getSectionModalConfig(courseId, sectionId),
+    enabled: open && !!courseId && !!sectionId,
+  });
+
+  React.useEffect(() => {
+    if (data) {
+      setForm({
+        enabled: data.enabled,
+        title: data.title,
+        description: data.description,
+      });
+    }
+  }, [data]);
+
+  const saveMut = useMutation({
+    mutationFn: () => updateSectionModalConfig(courseId, {
+      section_id: sectionId,
+      enabled: form.enabled ?? false,
+      title: form.title ?? '',
+      description: form.description ?? '',
+    }),
+    onSuccess: () => {
+      toast.success('Đã lưu cấu hình modal khích lệ');
+      queryClient.invalidateQueries({ queryKey: ['section-modal-config', courseId, sectionId] });
+      onClose();
+    },
+    onError: () => toast.error('Lưu thất bại'),
+  });
+
+  const updateField = (key: string, value: unknown) => setForm(prev => ({ ...prev, [key]: value }));
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            Modal khích lệ — Section
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground truncate" title={sectionName}>{sectionName}</p>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="space-y-3 py-4">
+            <div className="h-6 w-48 bg-muted/50 rounded animate-pulse" />
+            <div className="h-10 w-full bg-muted/50 rounded animate-pulse" />
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold">Bật popup khích lệ</Label>
+              <Switch
+                checked={form.enabled}
+                onCheckedChange={(v) => updateField('enabled', v)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                Tiêu đề {form.enabled && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                placeholder="Chúc mừng bạn đã hoàn thành!"
+                value={form.title || ''}
+                onChange={e => updateField('title', e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                Nội dung khích lệ {form.enabled && <span className="text-red-500">*</span>}
+              </label>
+              <textarea
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+                placeholder="Bạn đã nỗ lực tuyệt vời để hoàn thành phần này..."
+                value={form.description || ''}
+                onChange={e => updateField('description', e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Hủy</Button>
+          <Button
+            onClick={() => saveMut.mutate()}
+            disabled={
+              saveMut.isPending ||
+              (form.enabled && (!form.title?.trim() || !form.description?.trim()))
+            }
+          >
+            {saveMut.isPending ? 'Đang lưu...' : 'Lưu cấu hình'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
