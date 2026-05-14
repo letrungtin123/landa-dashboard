@@ -46,24 +46,13 @@ export default function VideoEditor({ displayName, onDisplayNameChange, metadata
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Tên hiển thị">
-          <input
-            className="flex h-11 w-full rounded-xl border border-input bg-background/50 px-4 text-sm font-medium shadow-sm transition-all duration-200 hover:bg-background focus:border-primary focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10"
-            value={displayName}
-            onChange={e => onDisplayNameChange(e.target.value)}
-          />
-        </Field>
-
-        <Field label="Start Time (tùy chọn)">
-          <input
-            className="flex h-11 w-full rounded-xl border border-input bg-background/50 px-4 text-sm font-mono shadow-sm transition-all duration-200 hover:bg-background focus:border-primary focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10"
-            value={metadata?.start_time || ''}
-            onChange={e => onMetadataChange({ ...metadata, start_time: e.target.value })}
-            placeholder="00:00:00"
-          />
-        </Field>
-      </div>
+      <Field label="Tên hiển thị">
+        <input
+          className="flex h-11 w-full rounded-xl border border-input bg-background/50 px-4 text-sm font-medium shadow-sm transition-all duration-200 hover:bg-background focus:border-primary focus:bg-background focus:outline-none focus:ring-4 focus:ring-primary/10"
+          value={displayName}
+          onChange={e => onDisplayNameChange(e.target.value)}
+        />
+      </Field>
 
       <Field label="YouTube URL hoặc Video ID">
         <div className="relative">

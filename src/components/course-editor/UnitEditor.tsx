@@ -922,8 +922,12 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
       if (!id) throw new Error('Block ID không hợp lệ');
 
       if (category === 'video') {
+        const payloadMetadata = { display_name: displayName, ...metadata };
+        if (payloadMetadata.start_time === "00:00:00" || payloadMetadata.start_time === "") delete payloadMetadata.start_time;
+        if (payloadMetadata.end_time === "00:00:00" || payloadMetadata.end_time === "") delete payloadMetadata.end_time;
+        
         return updateXBlock(id, {
-          metadata: { display_name: displayName, ...metadata },
+          metadata: payloadMetadata,
         });
       }
       if (category === 'html') {
