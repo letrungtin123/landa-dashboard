@@ -5,8 +5,25 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getUnitChildren, createXBlock, updateXBlock, deleteXBlock, studioSubmit, getBlockInfo, publishBlock,
+  getUnitChildren, createXBlock, updateXBlock, deleteXBlock, studioSubmit, getBlockInfo, publishBlock, reorderChildren,
 } from '@/api/course-authoring';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -145,6 +162,37 @@ export default function UnitEditor({ unitId, courseId, onContentChange }: {
 
   const children: ChildBlock[] = unitChildren?.children || [];
 
+  // ── Drag-and-drop state cho component ordering ──
+  const [localChildren, setLocalChildren] = useState<ChildBlock[]>(children);
+  useEffect(() => { setLocalChildren(children); }, [children]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const reorderMut = useMutation({
+    mutationFn: (childIds: string[]) => reorderChildren(unitId, childIds),
+    onSuccess: () => { refetch(); onContentChange(); },
+    onError: () => {
+      toast.error('Thay đổi thứ tự thất bại');
+      setLocalChildren(children); // revert
+    },
+  });
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = localChildren.findIndex((c) => (c.id || c.block_id) === active.id);
+      const newIndex = localChildren.findIndex((c) => (c.id || c.block_id) === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newArray = arrayMove(localChildren, oldIndex, newIndex);
+        setLocalChildren(newArray);
+        reorderMut.mutate(newArray.map((c) => c.id || c.block_id));
+      }
+    }
+  }
+
   const addMut = useMutation({
     mutationFn: ({ category, boilerplate }: { category: string; boilerplate?: string }) =>
       createXBlock({ type: category, category, parent_locator: unitId, boilerplate }),
@@ -187,17 +235,21 @@ export default function UnitEditor({ unitId, courseId, onContentChange }: {
         </div>
       )}
 
-      <div className="space-y-4">
-        {children.map(child => (
-          <ComponentCard
-            key={child.id || child.block_id}
-            block={child}
-            courseId={courseId}
-            onDelete={() => { refetch(); onContentChange(); }}
-            onSaved={() => { refetch(); onContentChange(); }}
-          />
-        ))}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={localChildren.map(c => c.id || c.block_id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-4">
+            {localChildren.map(child => (
+              <ComponentCard
+                key={child.id || child.block_id}
+                block={child}
+                courseId={courseId}
+                onDelete={() => { refetch(); onContentChange(); }}
+                onSaved={() => { refetch(); onContentChange(); }}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       <div className="pt-2">
         <Button
@@ -274,6 +326,14 @@ function ComponentCard({ block, courseId, onDelete, onSaved }: {
   const [blockData, setBlockData] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
 
+  // ── dnd-kit sortable hook ──
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: blockId });
+  const sortableStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    ...(isDragging ? { zIndex: 50, position: 'relative' as const, opacity: 0.6 } : {})
+  };
+
   const loadDetail = useCallback(async () => {
     setLoadingDetail(true);
     const detail = await fetchBlockDetail(block);
@@ -299,11 +359,22 @@ function ComponentCard({ block, courseId, onDelete, onSaved }: {
   }, [loadDetail, onSaved]);
 
   return (
-    <div className="border border-border rounded-xl bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+    <div
+      ref={setNodeRef}
+      style={sortableStyle}
+      className={`border border-border rounded-xl bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden group ${isDragging ? 'shadow-lg ring-2 ring-primary/20' : ''}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between bg-muted/30 px-4 py-2.5 border-b border-border">
         <div className="flex items-center gap-2.5 min-w-0">
-          <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-move shrink-0" />
+          <div
+            {...attributes}
+            {...listeners}
+            className="shrink-0 flex justify-center cursor-grab hover:text-foreground text-muted-foreground/30 hover:bg-muted-foreground/10 rounded px-0.5 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
           <span className="px-2 py-0.5 rounded bg-background border text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
             {block.block_type}
           </span>
