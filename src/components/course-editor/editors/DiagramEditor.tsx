@@ -29,11 +29,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Field } from './VideoEditor';
 import CustomShapeNode, { type DiagramNodeData } from './diagram/CustomShapeNode';
+import JunctionNode from './diagram/JunctionNode';
 import { useTheme } from 'next-themes';
 import { useDiagramHistory } from './diagram/useDiagramHistory';
 
 const nodeTypes = {
   customShape: CustomShapeNode,
+  junction: JunctionNode,
 };
 
 // Custom edge: hiện nút X ngay giữa đường nối trên canvas
@@ -47,6 +49,7 @@ function DeletableEdge({
   });
 
   const onDelete = (data as any)?.onDelete;
+  const onSplit = (data as any)?.onSplit;
   const isSelected = (data as any)?.isSelected;
 
   return (
@@ -60,8 +63,15 @@ function DeletableEdge({
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
               pointerEvents: 'all',
             }}
-            className="nodrag nopan"
+            className="nodrag nopan flex items-center gap-1"
           >
+            <button
+              onClick={(e) => { e.stopPropagation(); onSplit?.(id, labelX, labelY); }}
+              className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground shadow-lg hover:scale-110 transition-transform cursor-pointer"
+              title="Tạo điểm rẽ nhánh (Junction)"
+            >
+              <Plus className="w-3 h-3" />
+            </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(id); }}
               className="flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-white shadow-lg hover:scale-110 transition-transform cursor-pointer"
@@ -216,6 +226,52 @@ export default function DiagramEditor({
     setSelectedEdgeId(null);
   }, [activeDiagram, activeDiagramIndex, diagrams, diagramData, onDiagramDataChange, takeSnapshot]);
 
+  const splitEdgeById = useCallback((edgeId: string, labelX: number, labelY: number) => {
+    const edgeToSplit = activeDiagram.edges.find(e => e.id === edgeId);
+    if (!edgeToSplit) return;
+
+    const junctionId = uuidv4();
+    const newJunctionNode: Node<DiagramNodeData> = {
+      id: junctionId,
+      type: 'junction',
+      position: { x: labelX, y: labelY },
+      data: {
+        label: '',
+        shape: 'ellipse',
+        bgColor: '#ffffff',
+        textColor: '#000000',
+        tooltip: '',
+        target_diagram_id: '',
+      },
+    };
+
+    const edge1: Edge = {
+      id: uuidv4(),
+      source: edgeToSplit.source,
+      sourceHandle: edgeToSplit.sourceHandle,
+      target: junctionId,
+      targetHandle: 'top-target',
+      type: 'deletable',
+    };
+
+    const edge2: Edge = {
+      id: uuidv4(),
+      source: junctionId,
+      sourceHandle: 'bottom-source',
+      target: edgeToSplit.target,
+      targetHandle: edgeToSplit.targetHandle,
+      type: 'deletable',
+    };
+
+    const newEdges = activeDiagram.edges.filter(e => e.id !== edgeId).concat([edge1, edge2]);
+    const newDiagrams = [...diagrams];
+    newDiagrams[activeDiagramIndex] = { ...activeDiagram, nodes: [...activeDiagram.nodes, newJunctionNode], edges: newEdges };
+    const newData = { ...diagramData, diagrams: newDiagrams };
+    onDiagramDataChange(newData);
+    takeSnapshot(newData);
+    setSelectedEdgeId(null);
+  }, [activeDiagram, activeDiagramIndex, diagrams, diagramData, onDiagramDataChange, takeSnapshot]);
+
   // Gắn type='deletable' + trạng thái isSelected vào mỗi edge qua data
   const styledEdges = useMemo(() => {
     return activeDiagram.edges.map(e => {
@@ -230,10 +286,10 @@ export default function DiagramEditor({
           strokeWidth: isSelected ? 3 : 2,
         },
         animated: isSelected,
-        data: { ...((e as any).data || {}), onDelete: deleteEdgeById, isSelected },
+        data: { ...((e as any).data || {}), onDelete: deleteEdgeById, onSplit: splitEdgeById, isSelected },
       };
     });
-  }, [activeDiagram.edges, selectedEdgeId, deleteEdgeById]);
+  }, [activeDiagram.edges, selectedEdgeId, deleteEdgeById, splitEdgeById]);
 
   const updateSelectedNode = (data: Partial<DiagramNodeData>) => {
     if (!selectedNode) return;
