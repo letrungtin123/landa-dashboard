@@ -16,8 +16,10 @@ import {
   EdgeChange,
   ControlButton,
   BaseEdge,
-  getBezierPath,
+  getSmoothStepPath,
   EdgeLabelRenderer,
+  ConnectionMode,
+  ConnectionLineType,
   type EdgeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -43,9 +45,10 @@ function DeletableEdge({
   id, sourceX, sourceY, targetX, targetY,
   sourcePosition, targetPosition, style, markerEnd, data,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX, sourceY, sourcePosition,
     targetX, targetY, targetPosition,
+    borderRadius: 0,
   });
 
   const onDelete = (data as any)?.onDelete;
@@ -471,6 +474,8 @@ export default function DiagramEditor({
               onPaneClick={() => { setSelectedNode(null); setSelectedEdgeId(null); }}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
+              connectionMode={ConnectionMode.Loose}
+              connectionLineType={ConnectionLineType.Step}
               fitView
               deleteKeyCode="Delete"
             >

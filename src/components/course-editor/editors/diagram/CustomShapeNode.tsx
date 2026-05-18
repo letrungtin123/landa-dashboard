@@ -27,21 +27,61 @@ export default function CustomShapeNode({ data, selected }: NodeProps) {
 
   const content = (
     <div
-      className={`relative flex items-center justify-center border-2 px-4 py-2 min-w-[100px] min-h-[40px] shadow-sm transition-all ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}`}
+      className={`group relative flex items-center justify-center border-2 px-4 py-2 min-w-[100px] min-h-[40px] shadow-sm transition-all ${selected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}`}
       style={{
         backgroundColor: bgColor || '#ffffff',
         color: textColor || '#000000',
         borderRadius,
       }}
     >
-      <Handle type="target" position={Position.Top} id="top" className="w-2 h-2 !bg-muted-foreground" />
-      <Handle type="target" position={Position.Left} id="left" className="w-2 h-2 !bg-muted-foreground" />
-      <div className="text-sm font-semibold text-center whitespace-pre-wrap flex items-center gap-1">
+      {/* Top Handle */}
+      <Handle 
+        type="source" 
+        position={Position.Top} 
+        id="top" 
+        className="!w-[calc(100%+16px)] !h-5 !opacity-100 !bg-transparent !border-none !rounded-none flex items-center justify-center -translate-y-2.5 z-10" 
+        style={{ top: -8 }}
+      >
+        <div className="w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm" />
+      </Handle>
+
+      {/* Left Handle */}
+      <Handle 
+        type="source" 
+        position={Position.Left} 
+        id="left" 
+        className="!h-[calc(100%+16px)] !w-5 !opacity-100 !bg-transparent !border-none !rounded-none flex items-center justify-center -translate-x-2.5 z-10" 
+        style={{ left: -8 }}
+      >
+        <div className="w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm" />
+      </Handle>
+
+      <div className="text-sm font-semibold text-center whitespace-pre-wrap flex items-center gap-1 z-20 relative pointer-events-none">
         {label || 'Trống'}
         {target_diagram_id && <Link className="w-3 h-3 opacity-50" />}
       </div>
-      <Handle type="source" position={Position.Bottom} id="bottom" className="w-2 h-2 !bg-muted-foreground" />
-      <Handle type="source" position={Position.Right} id="right" className="w-2 h-2 !bg-muted-foreground" />
+
+      {/* Bottom Handle */}
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        id="bottom" 
+        className="!w-[calc(100%+16px)] !h-5 !opacity-100 !bg-transparent !border-none !rounded-none flex items-center justify-center translate-y-2.5 z-10" 
+        style={{ bottom: -8 }}
+      >
+        <div className="w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm" />
+      </Handle>
+
+      {/* Right Handle */}
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        id="right" 
+        className="!h-[calc(100%+16px)] !w-5 !opacity-100 !bg-transparent !border-none !rounded-none flex items-center justify-center translate-x-2.5 z-10" 
+        style={{ right: -8 }}
+      >
+        <div className="w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm" />
+      </Handle>
     </div>
   );
 
