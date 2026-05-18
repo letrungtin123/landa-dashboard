@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, BookOpen, GraduationCap, UserCheck, Percent, Award, AlertTriangle, ShieldAlert,
-  ArrowUpRight, Calendar, Clock, Download, RefreshCcw, ChevronLeft, ChevronRight, BarChart3, ChevronDown, Check, CheckCircle2
+  ArrowUpRight, Calendar, Clock, Download, RefreshCcw, ChevronLeft, ChevronRight, BarChart3, ChevronDown, Check, CheckCircle2, TrendingUp
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { exportReportExcel } from '@/utils/export-report';
 import { LearnerDetailModal } from '@/components/users/learner-detail-modal';
@@ -84,8 +84,7 @@ function ChartTrendModal({
     enabled: !!metricKey && isOpen,
   });
 
-  // Tạo màu ngẫu nhiên nhưng theo theme (pastel/mượt mà)
-  const getColors = () => [
+  const CHART_COLORS = [
     '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444',
     '#ec4899', '#06b6d4', '#84cc16', '#6366f1', '#14b8a6'
   ];
@@ -143,7 +142,7 @@ function ChartTrendModal({
                         key={key}
                         type="monotone"
                         dataKey={key}
-                        stroke={getColors()[index % getColors().length]}
+                        stroke={CHART_COLORS[index % CHART_COLORS.length]}
                         strokeWidth={3}
                         dot={{ r: 4, strokeWidth: 2 }}
                         activeDot={{ r: 6 }}
@@ -200,7 +199,7 @@ function TopCoursesWidget({ month, year, groupId }: { month: number, year: numbe
           <div className="flex-grow flex items-center justify-center text-sm text-muted-foreground border-2 border-dashed border-border rounded-xl bg-muted/20">Không có dữ liệu</div>
         ) : (
           <>
-            <div className="flex-grow w-full mt-4 min-h-[250px]">
+            <div className="w-full mt-4 h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
@@ -254,7 +253,134 @@ function TopCoursesWidget({ month, year, groupId }: { month: number, year: numbe
   );
 }
 
-function UncompletedWidget({ month, year, onSelectLearner, groupId, trendData }: { month: number, year: number, onSelectLearner: (u: string) => void, groupId: number | 'all', trendData?: Array<{ day: string, count: number }> }) {
+const GROUP_BAR_COLORS = [
+  '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899',
+  '#10b981', '#f59e0b', '#ef4444', '#06b6d4',
+  '#84cc16', '#14b8a6',
+];
+
+function GroupEnrollmentsWidget({
+  year,
+  selectedGroupId,
+}: {
+  year: number;
+  selectedGroupId: number | 'all';
+}) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['group-enrollments-trend', year, selectedGroupId],
+    queryFn: () => getReportChart(
+      year,
+      'total_enrollments',
+      selectedGroupId === 'all' ? undefined : selectedGroupId,
+      selectedGroupId === 'all'
+    ),
+  });
+
+  const groupKeys = useMemo(() => {
+    if (!data?.data || data.data.length === 0) return [];
+    return Object.keys(data.data[0]).filter(k => k !== 'month');
+  }, [data]);
+
+  const totalThisYear = useMemo(() => {
+    if (!data?.data) return 0;
+    return data.data.reduce((sum, row) => {
+      return sum + groupKeys.reduce((s, k) => s + (Number(row[k]) || 0), 0);
+    }, 0);
+  }, [data, groupKeys]);
+
+  return (
+    <Card className="shadow-sm border-border h-full flex flex-col bg-gradient-to-br from-background to-muted/20 overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/5 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none" />
+      <CardHeader className="p-5 pb-0">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-indigo-500" />
+              Tổng lượt đăng ký theo Group
+            </CardTitle>
+            <p className="text-[11px] text-muted-foreground">
+              Xu hướng đăng ký theo tháng — Năm {year}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-2xl font-bold text-foreground leading-none">
+              {isLoading ? '—' : totalThisYear.toLocaleString('en-US')}
+            </span>
+            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Cả năm</span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-5 flex-grow flex flex-col">
+        {isLoading ? (
+          <Skeleton className="w-full h-[240px] rounded-xl" />
+        ) : !data?.data || groupKeys.length === 0 ? (
+          <div className="flex-grow flex items-center justify-center text-sm text-muted-foreground border-2 border-dashed border-border rounded-xl bg-muted/20">
+            Không có dữ liệu
+          </div>
+        ) : (
+          <div className="w-full mt-2 h-[240px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.data} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                <defs>
+                  {groupKeys.map((key, i) => (
+                    <linearGradient key={key} id={`grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={GROUP_BAR_COLORS[i % GROUP_BAR_COLORS.length]} stopOpacity={0.15} />
+                      <stop offset="100%" stopColor={GROUP_BAR_COLORS[i % GROUP_BAR_COLORS.length]} stopOpacity={0} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.3} />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                />
+                <ReTooltip
+                  cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+                  contentStyle={{
+                    borderRadius: '10px',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--background)',
+                    fontSize: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  }}
+                  formatter={(value: number, name: string) => [
+                    value.toLocaleString('en-US') + ' lượt',
+                    name,
+                  ]}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
+                />
+                {groupKeys.map((key, i) => (
+                  <Line
+                    key={key}
+                    type="monotone"
+                    dataKey={key}
+                    stroke={GROUP_BAR_COLORS[i % GROUP_BAR_COLORS.length]}
+                    strokeWidth={2.5}
+                    dot={{ r: 3, strokeWidth: 2, fill: 'var(--background)' }}
+                    activeDot={{ r: 5, strokeWidth: 0 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: number, year: number, onSelectLearner: (u: string) => void, groupId: number | 'all' }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -313,80 +439,85 @@ function UncompletedWidget({ month, year, onSelectLearner, groupId, trendData }:
         </div>
       </CardHeader>
       <CardContent className="p-0 flex-grow flex flex-col">
-        {trendData && trendData.length > 0 && (() => {
-          const filtered = [...trendData];
-          return filtered.length > 0 ? (
-          <div className="h-28 w-full border-b border-border/40 bg-muted/10 p-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={filtered}>
-                <defs>
-                  <linearGradient id="uncompletedGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 9 }} />
-                <YAxis hide />
-                <ReTooltip cursor={{ fill: 'var(--muted)', opacity: 0.1 }} contentStyle={{ borderRadius: '8px', fontSize: '11px' }} />
-                <Area type="monotone" dataKey="count" stroke="#f59e0b" strokeWidth={2} fill="url(#uncompletedGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ) : null;
-        })()}
+        {/* Trend chart removed as requested */}
         {isLoading ? (
-          <div className="p-4 space-y-3 h-[325px] overflow-hidden">
+          <div className="p-4 space-y-3 min-h-[200px] overflow-hidden">
             {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
           </div>
         ) : !data || data.results.length === 0 ? (
-          <div className="flex items-center justify-center p-12 text-center text-sm text-muted-foreground italic h-[325px]">
+          <div className="flex items-center justify-center p-12 text-center text-sm text-muted-foreground italic min-h-[200px]">
             Không có dữ liệu
           </div>
         ) : (
-          <div className="divide-y divide-border/40 overflow-y-auto custom-scrollbar h-[325px]">
-            <AnimatePresence>
-              {data.results.map((u, i) => (
-                <motion.div key={u.username}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50 transition-all cursor-pointer group"
-                  onClick={() => onSelectLearner(u.username)}
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all ${
-                      u.is_stalled
-                        ? 'bg-red-500/10 text-red-600 group-hover:bg-red-500 group-hover:text-white'
-                        : 'bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
-                    }`}>
-                      {u.username.substring(0, 2).toUpperCase()}
+            <div className="divide-y divide-border/40 overflow-y-auto custom-scrollbar max-h-[440px]">
+              <AnimatePresence>
+                {data.results.map((u, i) => (
+                  <motion.div key={u.username}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-center p-4 hover:bg-muted/50 transition-all cursor-pointer group gap-4"
+                    onClick={() => onSelectLearner(u.username)}
+                  >
+                    {/* User Info Column */}
+                    <div className="flex items-center gap-3 w-[30%] min-w-[140px] shrink-0">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all ${
+                        u.is_stalled
+                          ? 'bg-red-500/10 text-red-600 group-hover:bg-red-500 group-hover:text-white'
+                          : 'bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
+                      }`}>
+                        {u.username.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground group-hover:text-amber-600 transition-colors truncate">{u.username}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground group-hover:text-amber-600 transition-colors truncate">{u.username}</p>
-                      {u.course_name && (
-                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">{u.course_name}</p>
+                    
+                    {/* Course Name Column */}
+                    <div className="flex-1 min-w-0">
+                      {u.course_name ? (
+                        <p className="text-xs text-foreground truncate" title={u.course_name}>
+                          {u.course_name}
+                        </p>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Không có khóa học</span>
                       )}
                     </div>
-                  </div>
-                  <div className="text-right shrink-0 ml-3">
-                    <div className="flex items-center justify-end gap-1 mb-1">
-                      <Clock className="h-2.5 w-2.5 text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground">
-                        {u.last_completion_at
-                          ? new Date(u.last_completion_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                          : 'Chưa học'}
-                      </span>
+                    
+                    {/* Progress Column */}
+                    <div className="w-[15%] min-w-[60px] shrink-0 flex flex-col justify-center">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-medium text-foreground">{u.progress}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${u.is_stalled ? 'bg-red-500' : 'bg-amber-500'}`} 
+                          style={{ width: `${Math.min(u.progress, 100)}%` }} 
+                        />
+                      </div>
                     </div>
-                    {u.is_stalled ? (
-                      <span className="text-[9px] font-bold text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Ngưng HĐ</span>
-                    ) : (
-                      <span className="text-[9px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Đang học</span>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+
+                    {/* Status Column */}
+                    <div className="w-[20%] min-w-[90px] shrink-0 text-right flex flex-col items-end justify-center">
+                      <div className="flex items-center justify-end gap-1 mb-1">
+                        <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">
+                          {u.last_completion_at
+                            ? new Date(u.last_completion_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : 'Chưa học'}
+                        </span>
+                      </div>
+                      {u.is_stalled ? (
+                        <span className="text-[9px] font-bold text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Ngưng HĐ</span>
+                      ) : (
+                        <span className="text-[9px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Đang học</span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
         )}
       </CardContent>
       {data && data.total_pages > 1 && (
@@ -704,7 +835,7 @@ export default function ReportSummaryPage() {
 
       {/* Main Charts & Lists */}
       <motion.div
-        className="grid gap-6 md:grid-cols-12"
+        className="flex flex-col gap-6"
         initial="hidden"
         animate="visible"
         variants={{
@@ -712,17 +843,25 @@ export default function ReportSummaryPage() {
           visible: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
         }}
       >
-        <motion.div variants={cardVariant} className="md:col-span-7">
+        <motion.div variants={cardVariant}>
           <TopCoursesWidget month={selectedMonth} year={selectedYear} groupId={selectedGroupId} />
         </motion.div>
 
-        <motion.div variants={cardVariant} className="md:col-span-5">
+        {groupsData && groupsData.groups.length > 0 && (
+          <motion.div variants={cardVariant}>
+            <GroupEnrollmentsWidget
+              year={selectedYear}
+              selectedGroupId={selectedGroupId}
+            />
+          </motion.div>
+        )}
+
+        <motion.div variants={cardVariant}>
           <UncompletedWidget
             month={selectedMonth}
             year={selectedYear}
-            onSelectLearner={setSelectedLearner}
             groupId={selectedGroupId}
-            trendData={data.lists.uncompleted_trend}
+            onSelectLearner={setSelectedLearner}
           />
         </motion.div>
       </motion.div>

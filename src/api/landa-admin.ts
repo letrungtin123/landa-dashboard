@@ -321,9 +321,10 @@ export async function getReportSummary(params?: { month?: number; year?: number;
   return data;
 }
 
-export async function getReportChart(year: number, metric: string, group_id?: number | string): Promise<ReportChartResponse> {
+export async function getReportChart(year: number, metric: string, group_id?: number | string, group_by_org?: boolean): Promise<ReportChartResponse> {
   const params: any = { year, metric };
   if (group_id) params.group_id = group_id;
+  if (group_by_org) params.group_by_org = true;
   const { data } = await apiClient.get<ReportChartResponse>(`${BASE}/report-chart/`, { params });
   return data;
 }

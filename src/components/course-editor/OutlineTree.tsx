@@ -16,7 +16,7 @@ import {
 } from '@/api/course-authoring';
 import {
   ChevronRight, ChevronDown, Plus, Trash2, Globe, EyeOff,
-  MoreVertical, Folder, Layout, FileText, Pencil, Check, X, GripVertical,
+  MoreVertical, Folder, Layout, FileText, Pencil, Check, X, GripVertical, BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
