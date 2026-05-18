@@ -303,6 +303,7 @@ export interface LearnerDetailResult {
 
 export interface LearnerDetailResponse {
   username: string;
+  groups?: Array<{ group_name: string; subgroup_name: string }>;
   results: LearnerDetailResult[];
   total_count: number;
   total_pages: number;

@@ -8,6 +8,7 @@ interface CrosswordWord {
   id: number;
   answer: string;
   clue: string;
+  hint?: string;
   row: number;
   col: number;
   direction: 'across' | 'down';
@@ -143,6 +144,16 @@ export default function CrosswordEditor({
                       placeholder="DAPAN"
                     />
                   </div>
+                </div>
+
+                <div className="col-span-2 space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Gợi ý — Hint (tuỳ chọn)</label>
+                  <input
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={word.hint || ''}
+                    onChange={e => updateWord(idx, 'hint', e.target.value)}
+                    placeholder="Nhập gợi ý giúp học viên trả lời..."
+                  />
                 </div>
 
                 <div className="space-y-1">

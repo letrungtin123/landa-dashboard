@@ -201,7 +201,14 @@ export function CrosswordPreviewInteractive({ parsed, showAnswers = false }: { p
               className="flex gap-4 items-start bg-muted/30 px-5 py-3.5 rounded-xl border border-transparent hover:border-primary/30 transition-colors"
             >
               <span className="font-bold text-primary shrink-0 mt-0.5">{w.id ?? idx + 1}.</span>
-              <span className="leading-relaxed">{w.clue || '(Chưa có gợi ý)'}</span>
+              <div className="flex-1">
+                <span className="leading-relaxed">{w.clue || '(Chưa có gợi ý)'}</span>
+                {w.hint && (
+                  <span className="block text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    💡 Hint: {w.hint}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>

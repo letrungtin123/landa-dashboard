@@ -112,6 +112,7 @@ export function LearnerDetailModal({ username, isOpen, onClose }: Props) {
   }, [handleObserver]);
 
   const allResults = data?.pages.flatMap((page) => page.results) || [];
+  const userGroups = data?.pages[0]?.groups || [];
 
   const { data: badgesData } = useQuery({
     queryKey: ['admin-user-badges', username],
@@ -149,6 +150,15 @@ export function LearnerDetailModal({ username, isOpen, onClose }: Props) {
                 <DialogTitle className="text-lg sm:text-2xl font-bold text-foreground truncate">
                   Chi tiết: {username}
                 </DialogTitle>
+                {userGroups.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2 mb-1">
+                    {userGroups.map((g: any, i: number) => (
+                      <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                        {g.group_name} <span className="mx-1 opacity-50">•</span> {g.subgroup_name}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 hidden sm:block">
                   Danh sách các khóa học đã đăng ký và tiến độ học tập.
                 </DialogDescription>
