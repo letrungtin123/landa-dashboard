@@ -50,6 +50,7 @@ import SortableEditor, { SortableItem } from './editors/SortableEditor';
 import { CrosswordPreviewInteractive } from './CrosswordPreview';
 import DiagramPreviewInteractive from './editors/diagram/DiagramPreviewInteractive';
 import DiagramEditor, { DiagramXBlockData } from './editors/DiagramEditor';
+import ImageCarousel from './ImageCarousel';
 
 const LMS_BASE = (import.meta as any).env?.VITE_OPENEDX_LMS_URL || 'http://local.openedx.io';
 
@@ -639,7 +640,48 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
 
     case 'html': {
       const html = blockData?.data || '';
-      return html.trim() ? (
+      
+      if (!html.trim()) {
+        return (
+          <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground gap-3">
+            <div className="p-3 bg-background rounded-full shadow-sm">
+              <Type className="h-6 w-6 text-muted-foreground/60" />
+            </div>
+            <span className="text-sm font-medium">Text/HTML — hover để nhập nội dung & hình ảnh</span>
+          </div>
+        );
+      }
+
+      const rewrittenHtml = rewriteHtml(html);
+      let images: { src: string; alt: string }[] = [];
+      let finalHtml = rewrittenHtml;
+
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rewrittenHtml, 'text/html');
+        const imgEls = doc.querySelectorAll('img');
+        
+        if (imgEls.length >= 2) {
+          images = Array.from(imgEls).map(img => ({
+            src: img.getAttribute('src') || '',
+            alt: img.getAttribute('alt') || ''
+          }));
+          
+          imgEls.forEach(img => img.remove());
+          
+          // Xóa các thẻ p bị rỗng
+          doc.querySelectorAll('p').forEach(p => {
+            if (!p.textContent?.trim() && p.children.length === 0) {
+              p.remove();
+            }
+          });
+          finalHtml = doc.body.innerHTML;
+        }
+      } catch (e) {
+        console.error("Failed to parse HTML for carousel", e);
+      }
+
+      return (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500">
@@ -648,21 +690,17 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
             <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Văn bản & Hình ảnh</span>
           </div>
           <div className="p-4 rounded-xl bg-background border border-border shadow-sm">
-            <div
-              dangerouslySetInnerHTML={{ __html: rewriteHtml(html) }}
-              className="prose dark:prose-invert max-w-none text-sm max-h-[300px] overflow-y-auto relative custom-scrollbar
-                [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6
-                [&_img]:max-h-48 [&_img]:object-contain [&_img]:rounded-lg [&_img]:shadow-sm [&_img]:border [&_img]:border-border [&_img]:my-2
-                [&_p]:leading-relaxed [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm"
-            />
+            {images.length >= 2 && <ImageCarousel images={images} />}
+            {finalHtml.trim() && (
+              <div
+                dangerouslySetInnerHTML={{ __html: finalHtml }}
+                className="prose dark:prose-invert max-w-none text-sm max-h-[300px] overflow-y-auto relative custom-scrollbar
+                  [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6
+                  [&_img]:max-h-48 [&_img]:object-contain [&_img]:rounded-lg [&_img]:shadow-sm [&_img]:border [&_img]:border-border [&_img]:my-2
+                  [&_p]:leading-relaxed [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm"
+              />
+            )}
           </div>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground gap-3">
-          <div className="p-3 bg-background rounded-full shadow-sm">
-            <Type className="h-6 w-6 text-muted-foreground/60" />
-          </div>
-          <span className="text-sm font-medium">Text/HTML — hover để nhập nội dung & hình ảnh</span>
         </div>
       );
     }
