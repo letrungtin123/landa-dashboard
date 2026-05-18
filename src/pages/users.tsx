@@ -6,16 +6,18 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Users as UsersIcon, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users as UsersIcon, ShieldAlert, CheckCircle2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { UserFormDialog } from '@/components/users/user-form-dialog';
+import { LearnerDetailModal } from '@/components/users/learner-detail-modal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { confirmDialog } from '@/utils/confirm-store';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Pagination } from '@/components/shared/pagination';
 import { TableToolbar } from '@/components/shared/table-toolbar';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAdminUsers, updateAdminUser, LandaUser } from '@/api/landa-admin';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -40,6 +42,7 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<LandaUser | undefined>();
+  const [selectedLearnerUsername, setSelectedLearnerUsername] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
@@ -239,6 +242,18 @@ export default function UsersPage() {
                             </span>
                           ) : (
                             <>
+                              {/* Nút Xem chi tiết — chỉ hiện cho learner */}
+                              {u.role === 'learner' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setSelectedLearnerUsername(u.username)}
+                                  className="h-8 w-8 text-primary/70 hover:text-primary hover:bg-primary/10 transition-colors rounded-md"
+                                  title="Xem chi tiết học tập"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                               {displayStatus === 'pending' && (
                                 <Button variant="ghost" size="icon" onClick={() => approveMutation.mutate(u.id)}
                                   disabled={approveMutation.isPending}
@@ -276,6 +291,12 @@ export default function UsersPage() {
         onOpenChange={setIsDialogOpen}
         user={selectedUser}
         onSuccess={() => setIsDialogOpen(false)}
+      />
+
+      <LearnerDetailModal
+        username={selectedLearnerUsername}
+        isOpen={!!selectedLearnerUsername}
+        onClose={() => setSelectedLearnerUsername(null)}
       />
     </div>
   );
