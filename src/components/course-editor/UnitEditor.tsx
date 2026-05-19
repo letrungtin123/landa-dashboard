@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/select';
 import {
   Trash2, GripVertical, Plus, Video, Type, HelpCircle,
-  Save, Edit2, ChevronDown, Puzzle, List, Check, X, Network
+  Save, Edit2, ChevronDown, Puzzle, List, Check, X, Network, MessageSquareText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoEditor from './editors/VideoEditor';
@@ -47,6 +47,7 @@ import HtmlEditor from './editors/HtmlEditor';
 import ProblemEditor, { PROBLEM_TYPES, parseProblemXml } from './editors/ProblemEditor';
 import CrosswordEditor, { CrosswordWord } from './editors/CrosswordEditor';
 import SortableEditor, { SortableItem } from './editors/SortableEditor';
+import FaqEditor, { FaqItem } from './editors/FaqEditor';
 import { CrosswordPreviewInteractive } from './CrosswordPreview';
 import DiagramPreviewInteractive from './editors/diagram/DiagramPreviewInteractive';
 import DiagramEditor, { DiagramXBlockData } from './editors/DiagramEditor';
@@ -54,7 +55,8 @@ import ImageCarousel from './ImageCarousel';
 
 import { config } from '@/config/env';
 
-const LMS_BASE = config.useRelativeApi ? '' : (import.meta.env.DEV ? '' : config.lmsBaseUrl);
+// Luôn dùng relative URL để asset loading flexible trên mọi domain/IP
+const LMS_BASE = '';
 
 function rewriteHtml(html: string): string {
   if (!html) return '';
@@ -108,6 +110,11 @@ const COMPONENT_TYPES: ComponentType[] = [
     id: 'la_diagram', category: 'la_diagram', label: 'Biểu đồ', desc: 'Sơ đồ tổ chức, Mindmap...',
     icon: <Network className="h-6 w-6" />,
     colorClass: 'border-orange-200 bg-orange-50 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950/30 dark:hover:bg-orange-900/40 text-orange-700 dark:text-orange-300',
+  },
+  {
+    id: 'la_faq', category: 'la_faq', label: 'FAQ', desc: 'Câu hỏi thường gặp',
+    icon: <MessageSquareText className="h-6 w-6" />,
+    colorClass: 'border-teal-200 bg-teal-50 hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/30 dark:hover:bg-teal-900/40 text-teal-700 dark:text-teal-300',
   },
 ];
 
@@ -757,6 +764,44 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
       return <DiagramPreviewInteractive data={parsed} />;
     }
 
+    case 'la_faq': {
+      const parsed = parseMaybeJson(blockData?.metadata?.faq_data || blockData?.faq_data);
+      const faqItems = parsed?.items || [];
+
+      if (faqItems.length === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground gap-3">
+            <div className="p-3 bg-background rounded-full shadow-sm">
+              <MessageSquareText className="h-6 w-6 text-muted-foreground/60" />
+            </div>
+            <span className="text-sm font-medium">FAQ — hover để thêm câu hỏi thường gặp</span>
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-1.5 rounded-md bg-teal-500/10 text-teal-600">
+              <MessageSquareText className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">FAQ — {faqItems.length} câu hỏi</span>
+          </div>
+          {faqItems.map((item: any, idx: number) => (
+            <details key={item.id || idx} className="group border border-border rounded-lg overflow-hidden bg-card">
+              <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none hover:bg-muted/50 transition-colors text-sm font-medium list-none">
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 transition-transform group-open:rotate-180" />
+                <span>{item.question || `Câu hỏi #${idx + 1}`}</span>
+              </summary>
+              <div className="px-4 pb-3 pt-1 text-sm text-muted-foreground border-t border-border/50 whitespace-pre-wrap">
+                {item.answer || 'Chưa có câu trả lời'}
+              </div>
+            </details>
+          ))}
+        </div>
+      );
+    }
+
     default:
       return (
         <div className="text-sm text-muted-foreground">[{blockType}] — hover để Edit cấu hình</div>
@@ -1027,6 +1072,12 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
     return parsed || { diagrams: [], start_diagram_id: '' };
   });
 
+  const [faqItems, setFaqItems] = useState<FaqItem[]>(() => {
+    const raw = blockInfo?.metadata?.faq_data || blockInfo?.faq_data;
+    const parsed = parseMaybeJson(raw);
+    return Array.isArray(parsed.items) ? parsed.items : [];
+  });
+
   const saveMut = useMutation({
     mutationFn: async () => {
       const id = blockInfo?.id;
@@ -1071,6 +1122,12 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
         return studioSubmit(id, {
           display_name: displayName,
           diagram_data: JSON.stringify(diagramData),
+        });
+      }
+      if (category === 'la_faq') {
+        return studioSubmit(id, {
+          display_name: displayName,
+          faq_data: JSON.stringify({ items: faqItems }),
         });
       }
       return updateXBlock(id, { metadata: { display_name: displayName } });
@@ -1141,6 +1198,15 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
             onSave={() => saveMut.mutate()}
             onCancel={onCancel}
             isSaving={saveMut.isPending}
+          />
+        );
+      case 'la_faq':
+        return (
+          <FaqEditor
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+            items={faqItems}
+            onItemsChange={setFaqItems}
           />
         );
       default:

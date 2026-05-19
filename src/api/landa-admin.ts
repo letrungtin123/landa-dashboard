@@ -220,7 +220,7 @@ export async function updateCourse(courseId: string, updates: {
   visible_to_staff_only?: boolean;
   display_name?: string;
 }): Promise<{ success: boolean }> {
-  const { data } = await apiClient.patch(`${BASE}/courses/${courseId}/`, updates);
+  const { data } = await apiClient.patch(`${BASE}/courses/${encodeURIComponent(courseId)}/`, updates);
   return data;
 }
 
@@ -249,12 +249,12 @@ export interface CourseModalConfig {
 }
 
 export async function getCourseModalConfig(courseId: string): Promise<CourseModalConfig> {
-  const { data } = await apiClient.get(`${BASE}/courses/${courseId}/modal-config/`);
+  const { data } = await apiClient.get(`${BASE}/courses/${encodeURIComponent(courseId)}/modal-config/`);
   return data;
 }
 
 export async function updateCourseModalConfig(courseId: string, config: Partial<CourseModalConfig>): Promise<{ success: boolean }> {
-  const { data } = await apiClient.put(`${BASE}/courses/${courseId}/modal-config/`, config);
+  const { data } = await apiClient.put(`${BASE}/courses/${encodeURIComponent(courseId)}/modal-config/`, config);
   return data;
 }
 
@@ -269,14 +269,14 @@ export interface SectionModalConfig {
 }
 
 export async function getSectionModalConfig(courseId: string, sectionId: string): Promise<SectionModalConfig> {
-  const { data } = await apiClient.get(`${BASE}/courses/${courseId}/section-modal-config/`, {
+  const { data } = await apiClient.get(`${BASE}/courses/${encodeURIComponent(courseId)}/section-modal-config/`, {
     params: { section_id: sectionId }
   });
   return data;
 }
 
 export async function updateSectionModalConfig(courseId: string, config: SectionModalConfig): Promise<{ success: boolean }> {
-  const { data } = await apiClient.put(`${BASE}/courses/${courseId}/section-modal-config/`, config);
+  const { data } = await apiClient.put(`${BASE}/courses/${encodeURIComponent(courseId)}/section-modal-config/`, config);
   return data;
 }
 
@@ -286,7 +286,7 @@ export async function sendCourseNotification(courseId: string, payload: {
   title: string;
   message: string;
 }): Promise<{ success: boolean; recipients: number }> {
-  const { data } = await apiClient.post(`${BASE}/courses/${courseId}/send-notification/`, payload);
+  const { data } = await apiClient.post(`${BASE}/courses/${encodeURIComponent(courseId)}/send-notification/`, payload);
   return data;
 }
 

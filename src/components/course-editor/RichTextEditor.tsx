@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 
 import { config } from '@/config/env';
 
-const LMS_BASE = config.useRelativeApi ? '' : (import.meta.env.DEV ? '' : config.lmsBaseUrl);
+// Luôn dùng relative URL để asset loading flexible trên mọi domain/IP
+const LMS_BASE = '';
 
 // Rewrite relative Open edX asset URLs sang tuyệt đối để ảnh hiển thị được trong editor
 function rewriteContentUrls(html: string): string {

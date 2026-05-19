@@ -37,13 +37,12 @@ function requireUrl(key: string, allowEmpty = false): string {
 }
 
 export const config = {
-  useRelativeApi: import.meta.env.VITE_USE_RELATIVE_API === "true",
-
+  // Cho phép lấy từ env nếu có, nếu không thì fallback về origin hiện tại
   get lmsBaseUrl(): string {
-    return requireUrl("VITE_OPENEDX_LMS_URL", this.useRelativeApi);
+    return requireUrl("VITE_OPENEDX_LMS_URL", true) || window.location.origin;
   },
   get cmsBaseUrl(): string {
-    return requireUrl("VITE_OPENEDX_CMS_URL", this.useRelativeApi);
+    return requireUrl("VITE_OPENEDX_CMS_URL", true) || window.location.origin;
   },
   clientId: requireEnv("VITE_OPENEDX_CLIENT_ID"),
   clientSecret: requireEnv("VITE_OPENEDX_CLIENT_SECRET"),
@@ -59,6 +58,6 @@ export const config = {
   publicOrigin: (import.meta.env.VITE_PUBLIC_ORIGIN || window.location.origin).trim(),
 
   get apiBaseUrl(): string {
-    return this.useRelativeApi ? "" : (import.meta.env.DEV ? "" : this.lmsBaseUrl);
+    return "";
   },
 } as const;

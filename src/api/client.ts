@@ -40,10 +40,13 @@ apiClient.interceptors.request.use(async (req) => {
 
   // Chuyển hướng các request tới CMS API
   if (req.url?.startsWith('/cms-api/')) {
-    if (config.useRelativeApi) {
+    const isKongProxyDomain = window.location.hostname.includes('elearning.l-a.vn');
+    const isDevProxy = import.meta.env.DEV;
+
+    if (isKongProxyDomain || isDevProxy) {
       req.baseURL = "";
       // Keep the /cms-api prefix so Kong can route it to Studio
-    } else if (!import.meta.env.DEV) {
+    } else {
       req.baseURL = config.cmsBaseUrl;
       req.url = req.url.replace(/^\/cms-api/, '');
     }

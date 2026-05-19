@@ -178,7 +178,7 @@ export async function revokeCourse(
   sgId: number,
   courseId: string,
 ): Promise<{ success: boolean }> {
-  const { data } = await apiClient.delete(`${BASE}/admin/subgroups/${sgId}/courses/${courseId}/`);
+  const { data } = await apiClient.delete(`${BASE}/admin/subgroups/${sgId}/courses/${encodeURIComponent(courseId)}/`);
   return data;
 }
 

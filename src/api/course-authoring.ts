@@ -130,7 +130,7 @@ function cmsHeaders() {
  * GET /api/contentstore/v1/course_index/{courseId}
  */
 export async function getCourseOutlineIndex(courseId: string): Promise<CourseIndexResponse> {
-  const { data } = await apiClient.get(`/cms-api/api/contentstore/v1/course_index/${courseId}`);
+  const { data } = await apiClient.get(`/cms-api/api/contentstore/v1/course_index/${encodeURIComponent(courseId)}`);
   return data;
 }
 
@@ -297,7 +297,7 @@ export async function createCourse(payload: {
  */
 export async function studioSubmit(blockId: string, payload: any): Promise<any> {
   const { data } = await apiClient.post(
-    `/cms-api/landa-admin/api/authoring/xblock/${blockId}/handler/studio_submit`,
+    `/cms-api/landa-admin/api/authoring/xblock/${encodeURIComponent(blockId)}/handler/studio_submit`,
     payload,
     { headers: cmsHeaders() }
   );
