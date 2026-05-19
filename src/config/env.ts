@@ -23,8 +23,13 @@ function requireEnvNumber(key: string, fallback?: number): number {
   return num;
 }
 
-function requireUrl(key: string): string {
-  const url = requireEnv(key);
+function requireUrl(key: string, allowEmpty = false): string {
+  const url = import.meta.env[key] || "";
+  if (allowEmpty && url.trim() === "") return "";
+  
+  if (!url || url.trim() === "") {
+    throw new Error(`[ENV] Thiếu biến môi trường: ${key}. Kiểm tra file .env.local.`);
+  }
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     throw new Error(`[ENV] ${key} phải là URL hợp lệ, nhận: "${url}"`);
   }
@@ -32,8 +37,14 @@ function requireUrl(key: string): string {
 }
 
 export const config = {
-  lmsBaseUrl: requireUrl("VITE_OPENEDX_LMS_URL"),
-  cmsBaseUrl: requireUrl("VITE_OPENEDX_CMS_URL"),
+  useRelativeApi: import.meta.env.VITE_USE_RELATIVE_API === "true",
+
+  get lmsBaseUrl(): string {
+    return requireUrl("VITE_OPENEDX_LMS_URL", this.useRelativeApi);
+  },
+  get cmsBaseUrl(): string {
+    return requireUrl("VITE_OPENEDX_CMS_URL", this.useRelativeApi);
+  },
   clientId: requireEnv("VITE_OPENEDX_CLIENT_ID"),
   clientSecret: requireEnv("VITE_OPENEDX_CLIENT_SECRET"),
   tokenRefreshBufferMs: requireEnvNumber("VITE_TOKEN_REFRESH_BUFFER_MS", 300_000),
@@ -45,7 +56,6 @@ export const config = {
     "https://login.microsoftonline.com/common"
   ).trim(),
 
-  useRelativeApi: import.meta.env.VITE_USE_RELATIVE_API === "true",
   publicOrigin: (import.meta.env.VITE_PUBLIC_ORIGIN || window.location.origin).trim(),
 
   get apiBaseUrl(): string {
