@@ -238,8 +238,19 @@ export default function ProfilePage() {
     }
   };
 
+  // Sanitize profile image URL to relative path to avoid CORS on production Kong Gateway
+  const sanitizeUrlToRelative = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname + parsed.search;
+    } catch {
+      return url;
+    }
+  };
+
   const avatarSrc = avatarPreview
-    || (profileData?.profile_image?.has_image ? profileData.profile_image.image_url_full : null)
+    || sanitizeUrlToRelative(profileData?.profile_image?.has_image ? profileData.profile_image.image_url_full : null)
     || user?.avatar_url;
 
   // ── Loading state ──

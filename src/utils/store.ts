@@ -141,6 +141,17 @@ async function fetchAndVerifyStaffUser(
   const isSuperuser = !!me.is_superuser;
   const role: UserRole = isSuperuser ? 'superadmin' : 'admin';
 
+  // Sanitize profile image URL to relative path to avoid CORS on production Kong Gateway
+  const sanitizeUrlToRelative = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname + parsed.search;
+    } catch {
+      return url;
+    }
+  };
+
   set({
     isAuthenticated: true,
     user: {
@@ -149,7 +160,7 @@ async function fetchAndVerifyStaffUser(
       name: account.name || me.username,
       username: me.username,
       role,
-      avatar: account.profile_image?.has_image ? account.profile_image.image_url_full : null,
+      avatar: sanitizeUrlToRelative(account.profile_image?.has_image ? account.profile_image.image_url_full : null),
       status: 'active',
       isStaff: !!me.is_staff,
       isSuperuser,
