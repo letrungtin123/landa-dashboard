@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
+import type { OnSelectionChangeParams } from '@xyflow/react';
 import {
   ReactFlow,
   MiniMap,
@@ -34,6 +35,8 @@ import CustomShapeNode, { type DiagramNodeData } from './diagram/CustomShapeNode
 import JunctionNode from './diagram/JunctionNode';
 import { useTheme } from 'next-themes';
 import { useDiagramHistory } from './diagram/useDiagramHistory';
+import { useSmartGuides } from './diagram/useSmartGuides';
+import SmartGuideLines from './diagram/SmartGuideLines';
 
 const nodeTypes = {
   customShape: CustomShapeNode,
@@ -49,6 +52,7 @@ function DeletableEdge({
     sourceX, sourceY, sourcePosition,
     targetX, targetY, targetPosition,
     borderRadius: 0,
+    offset: 0,
   });
 
   const onDelete = (data as any)?.onDelete;
@@ -134,6 +138,7 @@ export default function DiagramEditor({
   const { theme } = useTheme();
   
   const { undo, redo, takeSnapshot, canUndo, canRedo } = useDiagramHistory(diagramData, onDiagramDataChange);
+  const { guideLines, applySmartSnap, clearGuides } = useSmartGuides();
   
   const diagrams = diagramData?.diagrams?.length > 0 ? diagramData.diagrams : [defaultDiagram];
   const startDiagramId = diagramData?.start_diagram_id || diagrams[0].id;
@@ -144,15 +149,29 @@ export default function DiagramEditor({
 
   const [selectedNode, setSelectedNode] = useState<Node<DiagramNodeData> | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+
+  // Clipboard for cross-diagram copy/paste (supports multi-node + edges)
+  const clipboardRef = useRef<{ nodes: Node<DiagramNodeData>[]; edges: Edge[] } | null>(null);
+
+  const onSelectionChange = useCallback(({ nodes }: OnSelectionChangeParams) => {
+    setSelectedNodeIds(new Set(nodes.map(n => n.id)));
+    if (nodes.length === 1) {
+      setSelectedNode(nodes[0] as Node<DiagramNodeData>);
+    } else if (nodes.length > 1) {
+      setSelectedNode(null);
+    }
+  }, []);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      const newNodes = applyNodeChanges(changes, activeDiagram.nodes);
+      const snappedChanges = applySmartSnap(changes, activeDiagram.nodes);
+      const newNodes = applyNodeChanges(snappedChanges, activeDiagram.nodes);
       const newDiagrams = [...diagrams];
       newDiagrams[activeDiagramIndex] = { ...activeDiagram, nodes: newNodes as Node<DiagramNodeData>[] };
       onDiagramDataChange({ ...diagramData, diagrams: newDiagrams });
     },
-    [activeDiagram, activeDiagramIndex, diagrams, diagramData, onDiagramDataChange]
+    [activeDiagram, activeDiagramIndex, diagrams, diagramData, onDiagramDataChange, applySmartSnap]
   );
 
   const onEdgesChange = useCallback(
@@ -170,8 +189,9 @@ export default function DiagramEditor({
   );
 
   const onNodeDragStop = useCallback(() => {
+    clearGuides();
     takeSnapshot(diagramData);
-  }, [diagramData, takeSnapshot]);
+  }, [diagramData, takeSnapshot, clearGuides]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => {
@@ -327,7 +347,7 @@ export default function DiagramEditor({
     if (!selectedNode) return;
     const newNode: Node<DiagramNodeData> = {
       id: uuidv4(),
-      type: 'customShape',
+      type: selectedNode.type || 'customShape',
       position: { x: selectedNode.position.x + 40, y: selectedNode.position.y + 40 },
       data: { ...selectedNode.data },
     };
@@ -338,6 +358,71 @@ export default function DiagramEditor({
     takeSnapshot(newData);
     setSelectedNode(newNode);
   };
+
+  // Ctrl+C / Ctrl+V keyboard shortcuts for cross-diagram copy/paste (multi-node)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // Collect nodes to copy: multi-selected or single selected
+        let nodesToCopy: Node<DiagramNodeData>[] = [];
+        if (selectedNodeIds.size > 0) {
+          nodesToCopy = activeDiagram.nodes.filter(n => selectedNodeIds.has(n.id));
+        } else if (selectedNode) {
+          nodesToCopy = [selectedNode];
+        }
+        if (nodesToCopy.length > 0) {
+          const nodeIdSet = new Set(nodesToCopy.map(n => n.id));
+          // Copy edges that connect copied nodes to each other
+          const edgesToCopy = activeDiagram.edges.filter(
+            e => nodeIdSet.has(e.source) && nodeIdSet.has(e.target)
+          );
+          clipboardRef.current = { nodes: nodesToCopy, edges: edgesToCopy };
+        }
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboardRef.current && clipboardRef.current.nodes.length > 0) {
+          e.preventDefault();
+          const { nodes: srcNodes, edges: srcEdges } = clipboardRef.current;
+          // Build old ID → new ID mapping
+          const idMap = new Map<string, string>();
+          srcNodes.forEach(n => idMap.set(n.id, uuidv4()));
+
+          const pastedNodes: Node<DiagramNodeData>[] = srcNodes.map(n => ({
+            id: idMap.get(n.id)!,
+            type: n.type || 'customShape',
+            position: { x: n.position.x + 40, y: n.position.y + 40 },
+            data: { ...n.data, target_diagram_id: '' },
+          }));
+
+          const pastedEdges: Edge[] = srcEdges.map(e => ({
+            ...e,
+            id: uuidv4(),
+            source: idMap.get(e.source) || e.source,
+            target: idMap.get(e.target) || e.target,
+          }));
+
+          const newDiagrams = [...diagrams];
+          newDiagrams[activeDiagramIndex] = {
+            ...activeDiagram,
+            nodes: [...activeDiagram.nodes, ...pastedNodes],
+            edges: [...activeDiagram.edges, ...pastedEdges],
+          };
+          const newData = { ...diagramData, diagrams: newDiagrams };
+          onDiagramDataChange(newData);
+          takeSnapshot(newData);
+          if (pastedNodes.length === 1) setSelectedNode(pastedNodes[0]);
+          else setSelectedNode(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode, selectedNodeIds, activeDiagram, activeDiagramIndex, diagrams, diagramData, onDiagramDataChange, takeSnapshot]);
 
   const addNewDiagram = () => {
     const newDiagram: Diagram = {
@@ -471,7 +556,9 @@ export default function DiagramEditor({
               onConnect={onConnect}
               onNodeClick={handleNodeClick}
               onEdgeClick={handleEdgeClick}
-              onPaneClick={() => { setSelectedNode(null); setSelectedEdgeId(null); }}
+              onSelectionChange={onSelectionChange}
+              selectionOnDrag
+              onPaneClick={() => { setSelectedNode(null); setSelectedEdgeId(null); setSelectedNodeIds(new Set()); }}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               connectionMode={ConnectionMode.Loose}
@@ -493,6 +580,7 @@ export default function DiagramEditor({
               </Controls>
               <MiniMap />
               <Background gap={12} size={1} />
+              <SmartGuideLines guideLines={guideLines} />
             </ReactFlow>
           </div>
         </div>

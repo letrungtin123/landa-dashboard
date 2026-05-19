@@ -5,11 +5,16 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import CustomShapeNode, { type DiagramNodeData } from './CustomShapeNode';
 import JunctionNode from './JunctionNode';
+import OrthogonalEdge from './OrthogonalEdge';
 import { useTheme } from 'next-themes';
 
 const nodeTypes = {
   customShape: CustomShapeNode,
   junction: JunctionNode,
+};
+
+const edgeTypes = {
+  orthogonal: OrthogonalEdge,
 };
 
 export interface Diagram {
@@ -69,7 +74,7 @@ export default function DiagramPreviewInteractive({ data }: DiagramPreviewIntera
   const initialEdges = activeDiagram.edges.map((e) => ({
     ...e,
     animated: false,
-    type: 'step',
+    type: 'orthogonal' as const,
   }));
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -87,7 +92,7 @@ export default function DiagramPreviewInteractive({ data }: DiagramPreviewIntera
     setEdges(activeDiagram.edges.map((e) => ({
       ...e,
       animated: false,
-      type: 'step',
+      type: 'orthogonal' as const,
     })));
   }, [activeDiagram, setNodes, setEdges]);
 
@@ -112,6 +117,7 @@ export default function DiagramPreviewInteractive({ data }: DiagramPreviewIntera
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           connectionMode={ConnectionMode.Loose}
           onNodeClick={handleNodeClick}
           fitView

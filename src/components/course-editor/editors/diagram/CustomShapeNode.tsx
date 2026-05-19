@@ -36,22 +36,22 @@ export default function CustomShapeNode({ data, selected }: NodeProps) {
       }}
     >
       {/* Top Handle */}
-      <Handle 
-        type="source" 
-        position={Position.Top} 
-        id="top" 
-        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10" 
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top"
+        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10"
         style={{ top: 0, transform: 'translate(-50%, -50%)' }}
       >
         {!nodeData.hidePorts && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm cursor-crosshair" />}
       </Handle>
 
       {/* Left Handle */}
-      <Handle 
-        type="source" 
-        position={Position.Left} 
-        id="left" 
-        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10" 
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left"
+        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10"
         style={{ left: 0, transform: 'translate(-50%, -50%)' }}
       >
         {!nodeData.hidePorts && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm cursor-crosshair" />}
@@ -63,22 +63,22 @@ export default function CustomShapeNode({ data, selected }: NodeProps) {
       </div>
 
       {/* Bottom Handle */}
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
-        id="bottom" 
-        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10" 
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom"
+        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10"
         style={{ bottom: 0, transform: 'translate(-50%, 50%)' }}
       >
         {!nodeData.hidePorts && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm cursor-crosshair" />}
       </Handle>
 
       {/* Right Handle */}
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        id="right" 
-        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10" 
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className="!w-2 !h-2 !opacity-100 !bg-transparent !border-none !rounded-none z-10"
         style={{ right: 0, transform: 'translate(50%, -50%)' }}
       >
         {!nodeData.hidePorts && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary/40 opacity-0 group-hover:opacity-100 hover:!bg-primary hover:!scale-150 transition-all shadow-sm cursor-crosshair" />}
