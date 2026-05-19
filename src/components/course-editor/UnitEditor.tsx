@@ -52,7 +52,9 @@ import DiagramPreviewInteractive from './editors/diagram/DiagramPreviewInteracti
 import DiagramEditor, { DiagramXBlockData } from './editors/DiagramEditor';
 import ImageCarousel from './ImageCarousel';
 
-const LMS_BASE = (import.meta as any).env?.VITE_OPENEDX_LMS_URL || 'http://local.openedx.io';
+import { config } from '@/config/env';
+
+const LMS_BASE = config.useRelativeApi ? '' : (import.meta.env.DEV ? '' : config.lmsBaseUrl);
 
 function rewriteHtml(html: string): string {
   if (!html) return '';

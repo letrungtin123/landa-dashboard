@@ -38,10 +38,15 @@ apiClient.interceptors.request.use(async (req) => {
     if (csrf) req.headers["X-CSRFToken"] = csrf;
   }
 
-  // Chuyển hướng các request tới CMS API trong môi trường production
-  if (!import.meta.env.DEV && req.url?.startsWith('/cms-api/')) {
-    req.baseURL = config.cmsBaseUrl;
-    req.url = req.url.replace(/^\/cms-api/, '');
+  // Chuyển hướng các request tới CMS API
+  if (req.url?.startsWith('/cms-api/')) {
+    if (config.useRelativeApi) {
+      req.baseURL = "";
+      // Keep the /cms-api prefix so Kong can route it to Studio
+    } else if (!import.meta.env.DEV) {
+      req.baseURL = config.cmsBaseUrl;
+      req.url = req.url.replace(/^\/cms-api/, '');
+    }
   }
 
   return req;

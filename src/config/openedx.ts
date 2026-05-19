@@ -12,5 +12,6 @@ function ensureLeadingSlash(path: string): string {
 
 export function lmsUrl(path: string): string {
   const normalized = ensureLeadingSlash(path);
+  if (config.useRelativeApi) return normalized;
   return import.meta.env.DEV ? normalized : `${config.lmsBaseUrl}${normalized}`;
 }

@@ -14,7 +14,7 @@ function buildMicrosoftAuthUrl(): string {
   const params = new URLSearchParams({
     client_id: config.microsoftClientId,
     response_type: "id_token",
-    redirect_uri: window.location.origin + "/auth-redirect.html",
+    redirect_uri: config.publicOrigin + import.meta.env.BASE_URL + "auth-redirect.html",
     scope: MICROSOFT_SCOPES.join(" "),
     response_mode: "fragment",
     nonce,

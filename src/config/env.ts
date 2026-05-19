@@ -45,7 +45,10 @@ export const config = {
     "https://login.microsoftonline.com/common"
   ).trim(),
 
+  useRelativeApi: import.meta.env.VITE_USE_RELATIVE_API === "true",
+  publicOrigin: (import.meta.env.VITE_PUBLIC_ORIGIN || window.location.origin).trim(),
+
   get apiBaseUrl(): string {
-    return import.meta.env.DEV ? "" : this.lmsBaseUrl;
+    return this.useRelativeApi ? "" : (import.meta.env.DEV ? "" : this.lmsBaseUrl);
   },
 } as const;

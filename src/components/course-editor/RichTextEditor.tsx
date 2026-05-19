@@ -8,7 +8,9 @@ import { Image } from '@tiptap/extension-image';
 import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Quote, Undo, Redo, Code, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const LMS_BASE = (import.meta as any).env?.VITE_OPENEDX_LMS_URL || 'http://local.openedx.io';
+import { config } from '@/config/env';
+
+const LMS_BASE = config.useRelativeApi ? '' : (import.meta.env.DEV ? '' : config.lmsBaseUrl);
 
 // Rewrite relative Open edX asset URLs sang tuyệt đối để ảnh hiển thị được trong editor
 function rewriteContentUrls(html: string): string {
@@ -23,7 +25,7 @@ function rewriteContentUrls(html: string): string {
 // Khôi phục lại đường dẫn tương đối trước khi lưu
 function restoreContentUrls(html: string): string {
   if (!html) return html;
-  // Thay thế src="http://local.openedx.io/assets/..." thành src="/assets/..."
+  if (!LMS_BASE) return html;
   const regex = new RegExp(`src="${LMS_BASE}(/[^"]+)"`, 'g');
   return html.replace(regex, 'src="$1"');
 }
