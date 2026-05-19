@@ -102,11 +102,16 @@ function clearRefreshTimer(): void {
 /**
  * Sau khi có tokens, fetch user info + kiểm tra quyền staff/superuser.
  * Nếu user KHÔNG phải staff → xóa token ngay + throw StaffAccessDeniedError.
+ *
+ * @param accessToken - Token vừa nhận được, truyền thẳng vào API để tránh
+ *   race condition khi interceptor đọc store cũ (asyncimport có microtask delay).
  */
 async function fetchAndVerifyStaffUser(
   set: (partial: Partial<AuthState>) => void,
+  accessToken: string,
+  tokenType = "Bearer",
 ): Promise<void> {
-  const me = await getUserMe();
+  const me = await getUserMe(accessToken, tokenType);
 
   // ── GATE: Chỉ staff/superuser mới vào được ──
   if (!me.is_staff && !me.is_superuser) {
@@ -170,43 +175,47 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (username: string, password: string) => {
         const tokenRes = await loginApi(username, password);
+        const tokenType = tokenRes.token_type || 'Bearer';
         const expiresAt = Date.now() + tokenRes.expires_in * 1000;
         set({
           accessToken: tokenRes.access_token,
           refreshToken: tokenRes.refresh_token,
-          tokenType: tokenRes.token_type || 'Bearer',
+          tokenType,
           tokenExpiresAt: expiresAt,
         });
 
-        await fetchAndVerifyStaffUser(set);
+        // Truyền token trực tiếp — tránh race condition khi interceptor đọc store cũ
+        await fetchAndVerifyStaffUser(set, tokenRes.access_token, tokenType);
         await establishLmsSessionFromToken();
         get().scheduleTokenRefresh();
       },
 
       loginWithGoogle: async (edxTokens) => {
+        const tokenType = edxTokens.token_type || 'Bearer';
         const expiresAt = Date.now() + edxTokens.expires_in * 1000;
         set({
           accessToken: edxTokens.access_token,
           refreshToken: edxTokens.refresh_token,
-          tokenType: edxTokens.token_type || 'Bearer',
+          tokenType,
           tokenExpiresAt: expiresAt,
         });
 
-        await fetchAndVerifyStaffUser(set);
+        await fetchAndVerifyStaffUser(set, edxTokens.access_token, tokenType);
         await establishLmsSessionFromToken();
         get().scheduleTokenRefresh();
       },
 
       loginWithMicrosoft: async (edxTokens) => {
+        const tokenType = edxTokens.token_type || 'Bearer';
         const expiresAt = Date.now() + edxTokens.expires_in * 1000;
         set({
           accessToken: edxTokens.access_token,
           refreshToken: edxTokens.refresh_token,
-          tokenType: edxTokens.token_type || 'Bearer',
+          tokenType,
           tokenExpiresAt: expiresAt,
         });
 
-        await fetchAndVerifyStaffUser(set);
+        await fetchAndVerifyStaffUser(set, edxTokens.access_token, tokenType);
         await establishLmsSessionFromToken();
         get().scheduleTokenRefresh();
       },

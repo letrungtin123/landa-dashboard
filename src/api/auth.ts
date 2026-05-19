@@ -55,13 +55,23 @@ export async function refreshTokenApi(
  * Lấy thông tin user hiện tại.
  * /api/user/v1/me trả về { username, is_staff }.
  * is_superuser lấy thêm từ admin API nếu cần.
+ *
+ * @param bearerToken - Nếu truyền vào sẽ gắn Authorization header trực tiếp,
+ *   tránh race condition khi interceptor đọc store cũ ngay sau login.
  */
-export async function getUserMe(): Promise<UserMe> {
-  const { data } = await apiClient.get("/api/user/v1/me");
+export async function getUserMe(
+  bearerToken?: string,
+  tokenType = "Bearer",
+): Promise<UserMe> {
+  const headers = bearerToken
+    ? { Authorization: `${tokenType} ${bearerToken}` }
+    : undefined;
+
+  const { data } = await apiClient.get("/api/user/v1/me", { headers });
 
   let email = "";
   try {
-    const acct = await apiClient.get(`/api/user/v1/accounts/${data.username}`);
+    const acct = await apiClient.get(`/api/user/v1/accounts/${data.username}`, { headers });
     email = acct.data.email || "";
   } catch {
     // Email không bắt buộc cho flow chính
