@@ -550,6 +550,11 @@ export default function ReportSummaryPage() {
 
   const user = useAuthStore((s) => s.user);
   const isSuperadmin = user?.role === 'superadmin' || user?.isSuperuser === true;
+  const isLearnerPlus = user?.role === 'learner_plus';
+  const canViewReport = isSuperadmin || isLearnerPlus;
+
+  // learner_plus: auto-set group từ membership, không fetch all groups
+  const learnerPlusGroupId = user?.memberGroupIds?.[0];
 
   const { data: groupsData } = useQuery({
     queryKey: ['admin-groups-list'],
@@ -557,10 +562,25 @@ export default function ReportSummaryPage() {
     enabled: isSuperadmin,
   });
 
+  // learner_plus groups data giả lập từ auth store
+  const learnerPlusGroups = isLearnerPlus && user?.memberGroupIds
+    ? user.memberGroupIds.map((id, i) => ({ id, name: user.memberGroupNames?.[i] || `Group ${id}` }))
+    : [];
+
+  // Nếu learner_plus, auto-set selectedGroupId
+  const effectiveDefaultGroupId = isLearnerPlus ? (learnerPlusGroupId || 'all') : 'all';
+
+  // Override selectedGroupId nếu learner_plus chưa set (dùng useEffect tránh setState trong render)
+  useEffect(() => {
+    if (isLearnerPlus && selectedGroupId === 'all' && learnerPlusGroupId) {
+      setSelectedGroupId(learnerPlusGroupId);
+    }
+  }, [isLearnerPlus, selectedGroupId, learnerPlusGroupId]);
+
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['report-summary', selectedMonth, selectedYear, selectedGroupId],
     queryFn: () => getReportSummary({ month: selectedMonth, year: selectedYear, group_id: selectedGroupId === 'all' ? undefined : selectedGroupId }),
-    enabled: isSuperadmin,
+    enabled: canViewReport && (isSuperadmin || selectedGroupId !== 'all'),
   });
 
   const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
@@ -569,7 +589,7 @@ export default function ReportSummaryPage() {
   const { data: prevData } = useQuery({
     queryKey: ['report-summary', prevMonth, prevMonthYear, selectedGroupId],
     queryFn: () => getReportSummary({ month: prevMonth, year: prevMonthYear, group_id: selectedGroupId === 'all' ? undefined : selectedGroupId }),
-    enabled: isSuperadmin,
+    enabled: canViewReport && (isSuperadmin || selectedGroupId !== 'all'),
   });
 
   const handleExport = async () => {
@@ -589,7 +609,7 @@ export default function ReportSummaryPage() {
     }
   };
 
-  if (!isSuperadmin) {
+  if (!canViewReport) {
     return (
       <div className="p-6 space-y-6 max-w-7xl mx-auto pb-10">
         <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-12 text-center mt-12 backdrop-blur-sm">
@@ -597,7 +617,7 @@ export default function ReportSummaryPage() {
           <h2 className="text-xl font-bold text-destructive mb-2">Truy cập bị hạn chế</h2>
           <p className="text-muted-foreground text-sm max-w-md mx-auto">
             Bạn không có quyền cần thiết để xem phân tích hệ thống.
-            Chỉ quản trị viên cấp cao (superuser) mới có thể truy cập báo cáo chi tiết.
+            Chỉ quản trị viên cấp cao (superuser) hoặc người dùng Learner Plus mới có thể truy cập báo cáo.
           </p>
         </div>
       </div>
@@ -713,19 +733,38 @@ export default function ReportSummaryPage() {
             <DropdownMenuTrigger className="flex items-center gap-2 h-9 pl-3 pr-2 py-0 text-xs font-medium rounded-full border border-border bg-background hover:bg-muted outline-none focus-visible:ring-1 focus-visible:ring-primary transition-all text-foreground shadow-sm max-w-full sm:max-w-none">
               <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="truncate max-w-[100px] sm:max-w-[120px]">
-                {selectedGroupId === 'all' ? 'Tất cả các doanh nghiệp' : groupsData?.groups.find(g => g.id === selectedGroupId)?.name || 'Đang tải...'}
+                {isLearnerPlus
+                  ? (learnerPlusGroups.find(g => g.id === selectedGroupId)?.name || 'Nhóm của bạn')
+                  : selectedGroupId === 'all'
+                    ? 'Tất cả các doanh nghiệp'
+                    : groupsData?.groups.find(g => g.id === selectedGroupId)?.name || 'Đang tải...'}
               </span>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-1 shrink-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto rounded-lg custom-scrollbar">
-              <DropdownMenuItem
-                onClick={() => setSelectedGroupId('all')}
-                className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedGroupId === 'all' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
-              >
-                Tất cả các doanh nghiệp
-                <div className={`w-1.5 h-1.5 rounded-full transition-colors ${selectedGroupId === 'all' ? 'bg-foreground' : 'bg-transparent'}`} />
-              </DropdownMenuItem>
-              {groupsData?.groups.map(g => (
+              {/* Superadmin: hiện 'Tất cả' + all groups */}
+              {isSuperadmin && (
+                <DropdownMenuItem
+                  onClick={() => setSelectedGroupId('all')}
+                  className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedGroupId === 'all' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Tất cả các doanh nghiệp
+                  <div className={`w-1.5 h-1.5 rounded-full transition-colors ${selectedGroupId === 'all' ? 'bg-foreground' : 'bg-transparent'}`} />
+                </DropdownMenuItem>
+              )}
+              {/* Superadmin: list all groups from API */}
+              {isSuperadmin && groupsData?.groups.map(g => (
+                <DropdownMenuItem
+                  key={g.id}
+                  onClick={() => setSelectedGroupId(g.id)}
+                  className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedGroupId === g.id ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
+                >
+                  <span className="truncate">{g.name}</span>
+                  <div className={`w-1.5 h-1.5 rounded-full transition-colors ${selectedGroupId === g.id ? 'bg-foreground' : 'bg-transparent'}`} />
+                </DropdownMenuItem>
+              ))}
+              {/* Learner Plus: chỉ hiện groups của user */}
+              {isLearnerPlus && learnerPlusGroups.map(g => (
                 <DropdownMenuItem
                   key={g.id}
                   onClick={() => setSelectedGroupId(g.id)}
@@ -770,14 +809,17 @@ export default function ReportSummaryPage() {
           <button onClick={() => refetch()} className={`inline-flex items-center justify-center h-9 w-9 rounded-full border border-border bg-background hover:bg-muted transition-all text-muted-foreground hover:text-foreground active:scale-95 shadow-sm shrink-0 ${isFetching ? 'animate-spin' : ''}`}>
             <RefreshCcw className="h-3.5 w-3.5" />
           </button>
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className={`inline-flex items-center gap-2 h-9 px-4 text-xs font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 shadow-md shrink-0 ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}
-          >
-            {isExporting ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            <span className="whitespace-nowrap">{isExporting ? 'Đang xuất...' : 'Xuất dữ liệu'}</span>
-          </button>
+          {/* Ẩn nút Export cho learner_plus */}
+          {!isLearnerPlus && (
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className={`inline-flex items-center gap-2 h-9 px-4 text-xs font-medium rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95 shadow-md shrink-0 ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isExporting ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              <span className="whitespace-nowrap">{isExporting ? 'Đang xuất...' : 'Xuất dữ liệu'}</span>
+            </button>
+          )}
         </div>
       </div>
 

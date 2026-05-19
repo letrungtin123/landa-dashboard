@@ -349,12 +349,19 @@ export interface LandaUser {
   username: string;
   email: string;
   phone: string;
-  role: 'superuser' | 'staff' | 'learner';
+  role: 'superuser' | 'staff' | 'learner' | 'learner_plus';
   is_active: boolean;
   date_joined: string;
 }
 
-export async function getAdminUsers(params: { page: number; page_size: number; search?: string; role?: string }): Promise<PaginatedResponse<LandaUser>> {
+export async function getAdminUsers(params: { 
+  page: number; 
+  page_size: number; 
+  search?: string; 
+  role?: string;
+  group_id?: number | string;
+  subgroup_id?: number | string;
+}): Promise<PaginatedResponse<LandaUser>> {
   const { data } = await apiClient.get<PaginatedResponse<LandaUser>>(`${BASE}/users/`, { params });
   // Map fields slightly as the general PaginatedResponse expects 'data' but the generic DRF might return 'results' depending on usage.
   // Our new API returns 'results', so we map it.
@@ -457,3 +464,72 @@ export const getAdminUserStudyTime = async (username: string): Promise<AdminUser
   });
   return data;
 };
+
+// ══════════════════════════════════════════════
+// Course Categories API (CRUD)
+// ══════════════════════════════════════════════
+
+export interface CourseCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  sort_order: number;
+  course_count: number;
+  created_at: string | null;
+}
+
+export interface CourseCategoryMembership {
+  id: number;
+  course_id: string;
+  display_name: string;
+  assigned_at: string | null;
+}
+
+export async function getCourseCategories(): Promise<{ results: CourseCategory[] }> {
+  const { data } = await apiClient.get(`${BASE}/course-categories/`);
+  return data;
+}
+
+export async function createCourseCategory(payload: {
+  name: string;
+  description?: string;
+  sort_order?: number;
+}): Promise<{ id: number; name: string; slug: string }> {
+  const { data } = await apiClient.post(`${BASE}/course-categories/`, payload);
+  return data;
+}
+
+export async function updateCourseCategory(
+  id: number,
+  payload: { name?: string; description?: string; sort_order?: number },
+): Promise<{ id: number; name: string; slug: string }> {
+  const { data } = await apiClient.put(`${BASE}/course-categories/${id}/`, payload);
+  return data;
+}
+
+export async function deleteCourseCategory(id: number): Promise<void> {
+  await apiClient.delete(`${BASE}/course-categories/${id}/`);
+}
+
+export async function getCourseCategoryCourses(
+  categoryId: number,
+): Promise<{ results: CourseCategoryMembership[]; count: number }> {
+  const { data } = await apiClient.get(`${BASE}/course-categories/${categoryId}/courses/`);
+  return data;
+}
+
+export async function addCoursesToCategory(
+  categoryId: number,
+  courseIds: string[],
+): Promise<{ assigned: number; skipped: number }> {
+  const { data } = await apiClient.post(`${BASE}/course-categories/${categoryId}/courses/`, { course_ids: courseIds });
+  return data;
+}
+
+export async function removeCourseFromCategory(
+  categoryId: number,
+  courseId: string,
+): Promise<void> {
+  await apiClient.delete(`${BASE}/course-categories/${categoryId}/courses/${encodeURIComponent(courseId)}/`);
+}

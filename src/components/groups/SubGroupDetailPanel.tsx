@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, BookPlus, Trash2, Users, BookOpen, Loader2, FolderOpen, FolderPlus } from 'lucide-react';
+import { UserPlus, BookPlus, Trash2, Users, BookOpen, Loader2, FolderOpen, FolderPlus, FolderKanban, Eye } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,28 +8,42 @@ import { confirmDialog } from '@/utils/confirm-store';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  getSubGroupDetail, removeMember, revokeCourse, revokeCategory,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  getSubGroupDetail, removeMember, revokeCourse, revokeCategory, revokeCourseCategory,
   type SubGroupDetail,
 } from '@/api/landa-groups';
+import { getCourseCategoryCourses } from '@/api/landa-admin';
 import { AddMembersModal } from './AddMembersModal';
 import { AssignCoursesModal } from './AssignCoursesModal';
 import { AssignCategoriesModal } from './AssignCategoriesModal';
+import { AssignCourseCategoriesModal } from './AssignCourseCategoriesModal';
 
 
 interface Props {
   sgId: number;
 }
 
-type Tab = 'members' | 'courses' | 'categories';
+type Tab = 'members' | 'courses' | 'categories' | 'course_categories';
+
+// Tabs hiển thị trên UI (ẩn tab courses vì tạm không dùng phân course lẻ)
+const VISIBLE_TABS: Tab[] = ['members', 'categories', 'course_categories'];
 
 export function SubGroupDetailPanel({ sgId }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('members');
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [assignCoursesOpen, setAssignCoursesOpen] = useState(false);
   const [assignCategoriesOpen, setAssignCategoriesOpen] = useState(false);
+  const [assignCourseCategoriesOpen, setAssignCourseCategoriesOpen] = useState(false);
+  const [previewCatId, setPreviewCatId] = useState<number | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+  const [selectedCourseCategories, setSelectedCourseCategories] = useState<number[]>([]);
   const qc = useQueryClient();
 
   const { data: sg, isLoading } = useQuery<SubGroupDetail>({
@@ -107,6 +121,29 @@ export function SubGroupDetailPanel({ sgId }: Props) {
     onError: () => toast.error('Lỗi thu hồi danh mục'),
   });
 
+  const revokeCourseCategoryMutation = useMutation({
+    mutationFn: (categoryId: number) => revokeCourseCategory(sgId, categoryId),
+    onSuccess: () => {
+      toast.success('Đã thu hồi danh mục khóa học');
+      qc.invalidateQueries({ queryKey: ['subgroup-detail', sgId] });
+      qc.invalidateQueries({ queryKey: ['sub-groups', sg?.org_group_id] });
+    },
+    onError: () => toast.error('Lỗi thu hồi danh mục khóa học'),
+  });
+
+  const revokeMultipleCourseCategoriesMutation = useMutation({
+    mutationFn: async (categoryIds: number[]) => {
+      await Promise.all(categoryIds.map(id => revokeCourseCategory(sgId, id)));
+    },
+    onSuccess: () => {
+      toast.success('Đã thu hồi các danh mục khóa học đã chọn');
+      setSelectedCourseCategories([]);
+      qc.invalidateQueries({ queryKey: ['subgroup-detail', sgId] });
+      qc.invalidateQueries({ queryKey: ['sub-groups', sg?.org_group_id] });
+    },
+    onError: () => toast.error('Lỗi thu hồi danh mục khóa học'),
+  });
+
   const handleRemoveMember = (id: number, username: string) => {
     confirmDialog({
       title: 'Xóa thành viên',
@@ -161,6 +198,24 @@ export function SubGroupDetailPanel({ sgId }: Props) {
     });
   };
 
+  const handleRevokeCourseCategory = (categoryId: number, name: string) => {
+    confirmDialog({
+      title: 'Thu hồi danh mục khóa học',
+      description: `Thu hồi "${name}"? Các thành viên sẽ không còn thấy courses của danh mục này.`,
+      variant: 'destructive',
+      onConfirm: () => revokeCourseCategoryMutation.mutate(categoryId),
+    });
+  };
+
+  const handleBulkRevokeCourseCategories = () => {
+    confirmDialog({
+      title: 'Thu hồi nhiều danh mục khóa học',
+      description: `Thu hồi ${selectedCourseCategories.length} danh mục khóa học khỏi nhóm?`,
+      variant: 'destructive',
+      onConfirm: () => revokeMultipleCourseCategoriesMutation.mutate(selectedCourseCategories),
+    });
+  };
+
   const toggleMember = (id: number) => {
     setSelectedMembers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
@@ -197,6 +252,18 @@ export function SubGroupDetailPanel({ sgId }: Props) {
     }
   };
 
+  const toggleCourseCategory = (id: number) => {
+    setSelectedCourseCategories(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleAllCourseCategories = () => {
+    if (sg?.course_categories.length && selectedCourseCategories.length === sg.course_categories.length) {
+      setSelectedCourseCategories([]);
+    } else {
+      setSelectedCourseCategories(sg?.course_categories.map(c => c.category_id) ?? []);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-full p-4 gap-3">
@@ -219,19 +286,18 @@ export function SubGroupDetailPanel({ sgId }: Props) {
         <p className="text-xs text-muted-foreground mt-0.5">{sg.org_group_name}</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-border shrink-0 overflow-x-auto">
-        {(['members', 'courses', 'categories'] as Tab[]).map(tab => (
+        {VISIBLE_TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
           >
-            {tab === 'members' ? <Users className="h-3.5 w-3.5" /> : tab === 'courses' ? <BookOpen className="h-3.5 w-3.5" /> : <FolderOpen className="h-3.5 w-3.5" />}
-            {tab === 'members' ? `Thành viên (${sg.member_count})` : tab === 'courses' ? `Courses (${sg.course_count})` : `Danh mục (${sg.category_count})`}
+            {tab === 'members' ? <Users className="h-3.5 w-3.5" /> : tab === 'courses' ? <BookOpen className="h-3.5 w-3.5" /> : tab === 'categories' ? <FolderOpen className="h-3.5 w-3.5" /> : <FolderKanban className="h-3.5 w-3.5" />}
+            {tab === 'members' ? `Thành viên (${sg.member_count})` : tab === 'courses' ? `Courses (${sg.course_count})` : tab === 'categories' ? `Danh mục files (${sg.category_count})` : `Danh mục courses (${sg.course_category_count})`}
           </button>
         ))}
       </div>
@@ -393,7 +459,7 @@ export function SubGroupDetailPanel({ sgId }: Props) {
                 )}
               </div>
               <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setAssignCategoriesOpen(true)}>
-                <FolderPlus className="h-3.5 w-3.5" /> Phân danh mục
+                <FolderPlus className="h-3.5 w-3.5" /> Phân danh mục files
               </Button>
             </div>
             {sg.categories.length === 0 ? (
@@ -424,6 +490,76 @@ export function SubGroupDetailPanel({ sgId }: Props) {
                       className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                     >
                       {revokeCategoryMutation.isPending && revokeCategoryMutation.variables === c.category_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'course_categories' && (
+          <>
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={sg.course_categories.length > 0 && selectedCourseCategories.length === sg.course_categories.length}
+                  onCheckedChange={toggleAllCourseCategories}
+                  disabled={sg.course_categories.length === 0}
+                  id="select-all-course-categories"
+                />
+                <label htmlFor="select-all-course-categories" className="text-sm font-medium cursor-pointer">Chọn tất cả</label>
+                {selectedCourseCategories.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-8 ml-2 text-xs"
+                    onClick={handleBulkRevokeCourseCategories}
+                    disabled={revokeMultipleCourseCategoriesMutation.isPending}
+                  >
+                    {revokeMultipleCourseCategoriesMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+                    Xóa ({selectedCourseCategories.length})
+                  </Button>
+                )}
+              </div>
+              <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setAssignCourseCategoriesOpen(true)}>
+                <FolderPlus className="h-3.5 w-3.5" /> Phân danh mục courses
+              </Button>
+            </div>
+            {sg.course_categories.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-center">
+                <FolderKanban className="h-10 w-10 text-muted-foreground/20 mb-2" />
+                <p className="text-sm text-muted-foreground">Chưa có danh mục khóa học nào được phân</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {sg.course_categories.map(c => (
+                  <div
+                    key={c.category_id}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 group cursor-pointer"
+                    onClick={() => setPreviewCatId(c.category_id)}
+                  >
+                    <Checkbox
+                      checked={selectedCourseCategories.includes(c.category_id)}
+                      onCheckedChange={() => toggleCourseCategory(c.category_id)}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                    />
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <FolderKanban className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+                    </div>
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+                    <span className="text-[11px] text-muted-foreground/60 hidden group-hover:block shrink-0">
+                      {format(new Date(c.assigned_at), 'dd/MM/yyyy')}
+                    </span>
+                    <button
+                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleRevokeCourseCategory(c.category_id, c.name); }}
+                      disabled={revokeCourseCategoryMutation.isPending}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                    >
+                      {revokeCourseCategoryMutation.isPending && revokeCourseCategoryMutation.variables === c.category_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 ))}
@@ -464,6 +600,76 @@ export function SubGroupDetailPanel({ sgId }: Props) {
           qc.invalidateQueries({ queryKey: ['sub-groups', sg.org_group_id] });
         }}
       />
+      <AssignCourseCategoriesModal
+        open={assignCourseCategoriesOpen}
+        sgId={sgId}
+        assignedCategoryIds={sg.course_categories.map(c => c.category_id)}
+        onOpenChange={setAssignCourseCategoriesOpen}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ['subgroup-detail', sgId] });
+          qc.invalidateQueries({ queryKey: ['sub-groups', sg.org_group_id] });
+        }}
+      />
+      {/* Preview courses in category modal */}
+      <CourseCategoryPreviewModal
+        catId={previewCatId}
+        catName={sg.course_categories.find(c => c.category_id === previewCatId)?.name || ''}
+        onClose={() => setPreviewCatId(null)}
+      />
     </div>
+  );
+}
+
+
+// ═══════════════════════════════════════
+// Modal xem danh sách courses trong 1 danh mục
+// ═══════════════════════════════════════
+
+function CourseCategoryPreviewModal({ catId, catName, onClose }: { catId: number | null; catName: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['course-category-courses-preview', catId],
+    queryFn: () => getCourseCategoryCourses(catId!),
+    enabled: catId !== null && catId > 0,
+  });
+
+  const courses = data?.results ?? [];
+
+  return (
+    <Dialog open={catId !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[70vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FolderKanban className="h-4 w-4 text-primary" />
+            {catName}
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground">{courses.length} courses trong danh mục</p>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto border rounded-lg divide-y min-h-[120px] max-h-[400px]">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <BookOpen className="h-8 w-8 text-muted-foreground/20 mb-2" />
+              <p className="text-sm text-muted-foreground">Chưa có course nào trong danh mục</p>
+            </div>
+          ) : (
+            courses.map(c => (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <BookOpen className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{c.display_name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate font-mono">{c.course_id}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

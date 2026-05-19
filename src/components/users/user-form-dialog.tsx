@@ -37,7 +37,7 @@ const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().min(8, 'Phone number is required'),
   password: z.string().min(6, 'Min 6 characters'),
-  role: z.enum(['superuser', 'staff', 'learner']),
+  role: z.enum(['superuser', 'staff', 'learner', 'learner_plus']),
   is_active: z.string().transform(v => v === 'true'),
 });
 
@@ -46,7 +46,7 @@ const updateUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().min(8, 'Phone number is required'),
   password: z.string().optional().or(z.literal('')),
-  role: z.enum(['superuser', 'staff', 'learner']),
+  role: z.enum(['superuser', 'staff', 'learner', 'learner_plus']),
   is_active: z.string().transform(v => v === 'true'),
 });
 
@@ -264,6 +264,12 @@ export function UserFormDialog({
                               <span className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 Learner
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="learner_plus">
+                              <span className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                Learner Plus
                               </span>
                             </SelectItem>
                           </SelectContent>

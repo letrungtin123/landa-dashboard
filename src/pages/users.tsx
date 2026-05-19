@@ -17,6 +17,7 @@ import { Pagination } from '@/components/shared/pagination';
 import { TableToolbar } from '@/components/shared/table-toolbar';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAdminUsers, updateAdminUser, LandaUser } from '@/api/landa-admin';
+import { getOrgGroups, getSubGroups } from '@/api/landa-groups';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -30,6 +31,7 @@ const ROLE_COLORS: Record<string, string> = {
   superuser: 'text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20',
   staff: 'text-blue-600 dark:text-blue-500 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20',
   learner: 'text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20',
+  learner_plus: 'text-purple-600 dark:text-purple-500 bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20',
 };
 
 export default function UsersPage() {
@@ -40,6 +42,8 @@ export default function UsersPage() {
   const debouncedSearch = useDebounce(search, 500);
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [groupFilter, setGroupFilter] = useState('all');
+  const [subgroupFilter, setSubgroupFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<LandaUser | undefined>();
   const [selectedLearnerUsername, setSelectedLearnerUsername] = useState<string | null>(null);
@@ -55,15 +59,31 @@ export default function UsersPage() {
   const canAdd = hasPermission('account', 'general', 'can_add') || true; // Currently assumed true for staff/superuser
 
   useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { setPage(1); }, [debouncedSearch, roleFilter, statusFilter, limit]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, roleFilter, statusFilter, groupFilter, subgroupFilter, limit]);
+
+  const { data: groupsData } = useQuery({
+    queryKey: ['org-groups-all'],
+    queryFn: () => getOrgGroups({ page_size: 100 }),
+    enabled: mounted && !isLoggingOut,
+    staleTime: 60000,
+  });
+
+  const { data: subgroupsData } = useQuery({
+    queryKey: ['subgroups-all', groupFilter],
+    queryFn: () => getSubGroups(Number(groupFilter), { search: '' }),
+    enabled: mounted && !isLoggingOut && groupFilter !== 'all',
+    staleTime: 60000,
+  });
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['admin-users', page, limit, debouncedSearch, roleFilter],
+    queryKey: ['admin-users', page, limit, debouncedSearch, roleFilter, groupFilter, subgroupFilter],
     queryFn: () => getAdminUsers({
       page,
       page_size: limit,
       search: debouncedSearch,
       role: roleFilter === 'all' ? undefined : roleFilter,
+      group_id: groupFilter === 'all' ? undefined : groupFilter,
+      subgroup_id: subgroupFilter === 'all' ? undefined : subgroupFilter,
     }),
     enabled: mounted && !isLoggingOut,
     staleTime: 5000,
@@ -124,12 +144,23 @@ export default function UsersPage() {
         searchPlaceholder="Search by username or email..."
         filters={[
           {
+            key: 'group',
+            placeholder: 'Group',
+            options: groupsData?.groups?.map(g => ({ value: g.id.toString(), label: g.name })) || [],
+          },
+          ...(groupFilter !== 'all' ? [{
+            key: 'subgroup',
+            placeholder: 'Subgroup',
+            options: subgroupsData?.subgroups?.map(sg => ({ value: sg.id.toString(), label: sg.name })) || [],
+          }] : []),
+          {
             key: 'role',
             placeholder: 'Roles',
             options: [
               { value: 'superuser', label: 'Superuser' },
               { value: 'staff', label: 'Staff' },
               { value: 'learner', label: 'Learner' },
+              { value: 'learner_plus', label: 'Learner Plus' },
             ],
           },
           {
@@ -142,12 +173,17 @@ export default function UsersPage() {
             ],
           },
         ]}
-        filterValues={{ role: roleFilter, status: statusFilter }}
+        filterValues={{ role: roleFilter, status: statusFilter, group: groupFilter, subgroup: subgroupFilter }}
         onFilterChange={(key, val) => {
           if (key === 'role') setRoleFilter(val);
           if (key === 'status') setStatusFilter(val);
+          if (key === 'group') {
+            setGroupFilter(val);
+            setSubgroupFilter('all');
+          }
+          if (key === 'subgroup') setSubgroupFilter(val);
         }}
-        onReset={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all'); }}
+        onReset={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all'); setGroupFilter('all'); setSubgroupFilter('all'); }}
         actions={
           canAdd && (
             <Button onClick={() => { setSelectedUser(undefined); setIsDialogOpen(true); }} className="shadow-sm">
@@ -242,8 +278,8 @@ export default function UsersPage() {
                             </span>
                           ) : (
                             <>
-                              {/* Nút Xem chi tiết — chỉ hiện cho learner */}
-                              {u.role === 'learner' && (
+                              {/* Nút Xem chi tiết — chỉ hiện cho learner và learner_plus */}
+                              {(u.role === 'learner' || u.role === 'learner_plus') && (
                                 <Button
                                   variant="ghost"
                                   size="icon"

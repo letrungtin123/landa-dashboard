@@ -64,6 +64,12 @@ export default function LoginPage() {
     toast.error(msg);
   }
 
+  /** Redirect theo role sau login thành công */
+  function redirectAfterLogin() {
+    const role = useAuthStore.getState().user?.role;
+    navigate(role === 'learner_plus' ? '/report-summary' : '/library');
+  }
+
   // ── Password login ──
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -71,7 +77,7 @@ export default function LoginPage() {
     try {
       await login(values.email, values.password);
       toast.success('Đăng nhập thành công');
-      navigate('/library');
+      redirectAfterLogin();
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -88,7 +94,7 @@ export default function LoginPage() {
         const result = await googleLoginOrRegister(response.access_token);
         await loginWithGoogle(result.tokens);
         toast.success('Đăng nhập Google thành công');
-        navigate('/library');
+        redirectAfterLogin();
       } catch (err) {
         handleAuthError(err);
       } finally {
@@ -107,7 +113,7 @@ export default function LoginPage() {
       const result = await microsoftLoginOrRegister(idToken);
       await loginWithMicrosoft(result.tokens);
       toast.success('Đăng nhập Microsoft thành công');
-      navigate('/library');
+      redirectAfterLogin();
     } catch (err) {
       handleAuthError(err);
     } finally {

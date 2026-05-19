@@ -29,7 +29,8 @@ export function AuthGuard({ requireAuth }: AuthGuardProps) {
   }
 
   if (!requireAuth && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    const role = useAuthStore.getState().user?.role;
+    return <Navigate to={role === 'learner_plus' ? '/report-summary' : '/dashboard'} replace />;
   }
 
   return <Outlet />;

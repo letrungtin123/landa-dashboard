@@ -11,6 +11,7 @@ import { RouteProgress } from '@/components/route-progress';
 import { MotionProvider } from '@/components/motion-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthGuard } from '@/components/auth-guard';
+import { useAuthStore } from '@/utils/store';
 import { config } from '@/config/env';
 
 import AuthLayout from '@/layout/auth-layout';
@@ -28,6 +29,8 @@ import CoursesPage from '@/pages/courses';
 import CourseEditorPage from '@/pages/course-editor';
 import GroupsPage from '@/pages/groups';
 import HelpDocsPage from '@/pages/help-docs';
+import CourseCategoriesPage from './pages/course-categories';
+
 
 function AppRoutes() {
   return (
@@ -51,6 +54,7 @@ function AppRoutes() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId/edit" element={<CourseEditorPage />} />
           <Route path="/groups" element={<GroupsPage />} />
+          <Route path="/course-categories" element={<CourseCategoriesPage />} />
           <Route path="/help-docs" element={<HelpDocsPage />} />
 
           {/* Legacy redirects */}
@@ -63,11 +67,20 @@ function AppRoutes() {
         </Route>
       </Route>
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/library" replace />} />
-      <Route path="*" element={<Navigate to="/library" replace />} />
+      {/* Default redirect — learner_plus → /report-summary, others → /library */}
+      <Route path="/" element={<DefaultRedirect />} />
+      <Route path="*" element={<DefaultRedirect />} />
     </Routes>
   );
+}
+
+/** Redirect dựa trên role: learner_plus → /report-summary, còn lại → /library */
+function DefaultRedirect() {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'learner_plus') {
+    return <Navigate to="/report-summary" replace />;
+  }
+  return <Navigate to="/library" replace />;
 }
 
 export default function App() {

@@ -41,7 +41,7 @@ const encryptedStorage = createJSONStorage(() => ({
 }));
 
 // ── Types ──
-export type UserRole = 'superadmin' | 'admin' | 'staff';
+export type UserRole = 'superadmin' | 'admin' | 'staff' | 'learner_plus';
 export type UserStatus = 'active' | 'inactive';
 
 export interface User {
@@ -58,6 +58,8 @@ export interface User {
   tenant_id?: string | null;
   created_at?: string;
   permission_group_id?: string | null;
+  memberGroupIds?: number[];
+  memberGroupNames?: string[];
 }
 
 export type PermissionsMap = Record<string, Record<string, { view: boolean; add: boolean; edit: boolean; delete: boolean }>>;
@@ -113,9 +115,59 @@ async function fetchAndVerifyStaffUser(
 ): Promise<void> {
   const me = await getUserMe(accessToken, tokenType);
 
-  // ── GATE: Chỉ staff/superuser mới vào được ──
+  // ── GATE: staff/superuser hoặc learner_plus mới vào được ──
   if (!me.is_staff && !me.is_superuser) {
-    // Xóa token ngay — không cho user thường giữ token
+    // Không phải staff/superuser → kiểm tra custom role (learner_plus)
+    try {
+      const { getMyRole } = await import('@/api/landa-groups');
+      const roleData = await getMyRole();
+
+      if (roleData.role === 'learner_plus') {
+        // learner_plus được phép vào
+        let account;
+        try {
+          account = await getUserAccount(me.username);
+        } catch {
+          account = {
+            name: me.username,
+            profile_image: { has_image: false, image_url_full: '' },
+            date_joined: new Date().toISOString(),
+          };
+        }
+
+        const sanitizeUrlToRelative = (url: string | null | undefined): string | null => {
+          if (!url) return null;
+          try {
+            const parsed = new URL(url);
+            return parsed.pathname + parsed.search;
+          } catch {
+            return url;
+          }
+        };
+
+        set({
+          isAuthenticated: true,
+          user: {
+            id: me.username,
+            email: me.email,
+            name: account.name || me.username,
+            username: me.username,
+            role: 'learner_plus',
+            avatar: sanitizeUrlToRelative(account.profile_image?.has_image ? account.profile_image.image_url_full : null),
+            status: 'active',
+            isStaff: false,
+            isSuperuser: false,
+            memberGroupIds: roleData.group_ids,
+            memberGroupNames: roleData.group_names,
+          },
+        });
+        return;
+      }
+    } catch {
+      // API lỗi hoặc không có role → chặn
+    }
+
+    // Không phải learner_plus → chặn hoàn toàn
     set({
       accessToken: null,
       refreshToken: null,

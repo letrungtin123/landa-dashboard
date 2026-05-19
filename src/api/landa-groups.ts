@@ -24,6 +24,7 @@ export interface SubGroup {
   org_group_id: number;
   member_count: number;
   course_count: number;
+  course_category_count: number;
   created_at: string;
 }
 
@@ -46,12 +47,21 @@ export interface AssignedCategory {
   assigned_at: string;
 }
 
+export interface AssignedCourseCategory {
+  category_id: number;
+  name: string;
+  slug: string;
+  assigned_at: string;
+}
+
 export interface SubGroupDetail extends SubGroup {
   org_group_name: string;
   category_count: number;
+  course_category_count: number;
   members: SubGroupMember[];
   courses: AssignedCourse[];
   categories: AssignedCategory[];
+  course_categories: AssignedCourseCategory[];
 }
 
 export interface GroupAuditLogItem {
@@ -200,6 +210,24 @@ export async function revokeCategory(
   return data;
 }
 
+// ── Course Category Assignment API ──
+
+export async function assignCourseCategories(
+  sgId: number,
+  categoryIds: number[],
+): Promise<{ success: boolean; assigned: number; skipped: number }> {
+  const { data } = await apiClient.post(`${BASE}/admin/subgroups/${sgId}/course-categories/`, { category_ids: categoryIds });
+  return data;
+}
+
+export async function revokeCourseCategory(
+  sgId: number,
+  categoryId: number,
+): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/admin/subgroups/${sgId}/course-categories/${categoryId}/`);
+  return data;
+}
+
 // ── Group Audit Logs ──
 
 export interface GroupAuditLogsResponse {
@@ -219,5 +247,18 @@ export async function getGroupAuditLogs(params?: {
   date_to?: string;
 }): Promise<GroupAuditLogsResponse> {
   const { data } = await apiClient.get(`${BASE}/admin/group-audit-logs/`, { params });
+  return data;
+}
+
+// ── My Role API (learner_plus) ──
+
+export interface MyRoleResponse {
+  role: string | null;
+  group_ids: number[];
+  group_names: string[];
+}
+
+export async function getMyRole(): Promise<MyRoleResponse> {
+  const { data } = await apiClient.get(`${BASE}/v0/my-role/`);
   return data;
 }

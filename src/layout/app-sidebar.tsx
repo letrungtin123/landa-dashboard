@@ -43,6 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { title: 'Library', url: '/library', module: 'library', fallbackIcon: 'Library' },
       { title: 'Courses', url: '/courses', module: 'courses', fallbackIcon: 'GraduationCap' },
+      { title: 'Course Categories', url: '/course-categories', module: 'course_categories', fallbackIcon: 'FolderKanban' },
     ],
   },
   {
@@ -88,6 +89,11 @@ export function AppSidebar() {
   // Check if user can see a module (has can_view on 'general' tab)
   const canSeeModule = (item: NavItem): boolean => {
     if (!user) return false;
+    
+    // learner_plus chỉ thấy Report Summary
+    if (user.role === 'learner_plus') {
+      return item.module === 'report_summary';
+    }
     
     // Restrict Audit Logs and Reports to Superusers only
     if (item.module === 'audit_log' || item.module === 'report_summary') {
@@ -185,7 +191,7 @@ export function AppSidebar() {
                     {user?.name || 'Admin User'}
                   </span>
                   <span className="text-[11px] font-medium text-sidebar-foreground/40 truncate leading-tight mt-0.5">
-                    {user?.role === 'superadmin' ? 'Super Administrator' : 'Administrator'}
+                    {user?.role === 'superadmin' ? 'Super Administrator' : user?.role === 'learner_plus' ? 'Report Viewer' : 'Administrator'}
                   </span>
                 </div>
               </Link>
