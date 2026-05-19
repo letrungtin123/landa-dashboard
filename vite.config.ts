@@ -28,29 +28,29 @@ export default defineConfig(({ mode }) => {
         '/oauth2': {
           target: lmsUrl,
           changeOrigin: true,
-          cookieDomainRewrite: 'localhost',
+          cookieDomainRewrite: '',
         },
         // Forward API calls đến CMS (Studio)
         '/cms-api': {
           target: env.VITE_OPENEDX_CMS_URL || 'http://studio.local.openedx.io',
           changeOrigin: true,
-          cookieDomainRewrite: 'localhost',
+          cookieDomainRewrite: '',
           rewrite: (path) => path.replace(/^\/cms-api/, ''),
         },
         '/api': {
           target: lmsUrl,
           changeOrigin: true,
-          cookieDomainRewrite: 'localhost',
+          cookieDomainRewrite: '',
         },
         '/login_ajax': {
           target: lmsUrl,
           changeOrigin: true,
-          cookieDomainRewrite: 'localhost',
+          cookieDomainRewrite: '',
         },
         '/logout': {
           target: lmsUrl,
           changeOrigin: true,
-          cookieDomainRewrite: 'localhost',
+          cookieDomainRewrite: '',
         },
         // Forward hình ảnh và static files của Open edX
         '/asset-v1:': {
