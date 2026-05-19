@@ -439,7 +439,7 @@ function AddCoursesToCategoryModal({
                 <Checkbox
                   checked={isSelected || isAssigned}
                   disabled={isAssigned}
-                  onCheckedChange={() => !isAssigned && toggle(c.id)}
+                  className="pointer-events-none"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{c.display_name}</p>
