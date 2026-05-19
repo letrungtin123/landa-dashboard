@@ -40,13 +40,15 @@ apiClient.interceptors.request.use(async (req) => {
 
   // Chuyển hướng các request tới CMS API
   if (req.url?.startsWith('/cms-api/')) {
-    const isKongProxyDomain = window.location.hostname.includes('elearning.l-a.vn');
-    const isDevProxy = import.meta.env.DEV;
+    const rawCmsEnv = (import.meta.env.VITE_OPENEDX_CMS_URL || "").trim();
 
-    if (isKongProxyDomain || isDevProxy) {
+    // Nếu cấu hình VITE_OPENEDX_CMS_URL rỗng -> App đang rely vào Proxy cùng origin (Kong hoặc Vite Preview)
+    // Hoặc nếu đang chạy dev server -> Vite dev proxy sẽ lo việc route
+    if (import.meta.env.DEV || rawCmsEnv === "") {
       req.baseURL = "";
-      // Keep the /cms-api prefix so Kong can route it to Studio
+      // Giữ nguyên prefix /cms-api/ để proxy (Vite hoặc Kong) nhận diện và xử lý
     } else {
+      // Nếu có explicit CMS URL (chạy build tĩnh không proxy), bắn trực tiếp và bóc prefix
       req.baseURL = config.cmsBaseUrl;
       req.url = req.url.replace(/^\/cms-api/, '');
     }
