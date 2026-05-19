@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const lmsUrl = env.VITE_OPENEDX_LMS_URL || 'http://local.openedx.io';
 
   return {
+    base: '/admin/', // Quan trọng: Để assets tải đúng đường dẫn qua Kong Gateway
     plugins: [react()],
     resolve: {
       alias: {
@@ -16,6 +17,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       strictPort: false,
+      allowedHosts: [
+        'elearning.l-a.vn',
+        'www.elearning.l-a.vn',
+        '192.168.0.226',
+        '192.168.0.226.nip.io',
+      ],
       proxy: {
         // Forward tất cả API calls đến LMS
         '/oauth2': {
@@ -74,6 +81,16 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
+    },
+    preview: {
+      host: '0.0.0.0',
+      port: 3000,
+      allowedHosts: [
+        'elearning.l-a.vn',
+        'www.elearning.l-a.vn',
+        '192.168.0.226',
+        '192.168.0.226.nip.io',
+      ],
     },
   };
 });
