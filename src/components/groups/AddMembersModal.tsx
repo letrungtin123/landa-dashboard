@@ -31,7 +31,7 @@ export function AddMembersModal({ open, sgId, existingMemberIds, onOpenChange, o
     queryKey: ['users-for-group', debouncedSearch, page],
     queryFn: () => getAdminUsers({ page, page_size: 20, search: debouncedSearch, role: 'learner' }),
     enabled: open,
-    staleTime: 10000,
+    staleTime: 0,
   });
 
   const mutation = useMutation({
@@ -103,17 +103,15 @@ export function AddMembersModal({ open, sgId, existingMemberIds, onOpenChange, o
               <div
                 key={u.id}
                 onClick={() => !isExisting && toggle(u.id)}
-                className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${
-                  isExisting
+                className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${isExisting
                     ? 'opacity-40 cursor-not-allowed bg-muted/20'
                     : isSelected
-                    ? 'bg-primary/10 cursor-pointer'
-                    : 'hover:bg-muted/30 cursor-pointer'
-                }`}
+                      ? 'bg-primary/10 cursor-pointer'
+                      : 'hover:bg-muted/30 cursor-pointer'
+                  }`}
               >
-                <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                  isSelected || isExisting ? 'bg-primary border-primary' : 'border-border'
-                }`}>
+                <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected || isExisting ? 'bg-primary border-primary' : 'border-border'
+                  }`}>
                   {(isSelected || isExisting) && <UserCheck className="h-3 w-3 text-white" />}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-semibold shrink-0">
