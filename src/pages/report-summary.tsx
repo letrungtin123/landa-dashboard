@@ -5,7 +5,7 @@ import {
   getReportSummary,
   getReportChart,
   getReportTopCourses,
-  getReportUncompletedLearners,
+  getReportLearners,
 } from '@/api/landa-admin';
 import { getOrgGroups } from '@/api/landa-groups';
 import { useQuery } from '@tanstack/react-query';
@@ -384,16 +384,16 @@ function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: n
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'stalled' | 'learning'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'not_started' | 'learning' | 'completed'>('all');
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['report-uncompleted-learners', month, year, page, debouncedSearch, groupId, statusFilter],
-    queryFn: () => getReportUncompletedLearners({ 
+  const { data, isLoading } = useQuery({
+    queryKey: ['report-learners', month, year, page, debouncedSearch, groupId, statusFilter],
+    queryFn: () => getReportLearners({ 
       month, year, page, page_size: 5, 
       search: debouncedSearch, 
       group_id: groupId === 'all' ? undefined : groupId,
@@ -401,21 +401,25 @@ function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: n
     }),
   });
 
+  const statusConfig = {
+    not_started: { label: 'Chưa học', avatarClass: 'bg-muted text-muted-foreground group-hover:bg-slate-500 group-hover:text-white', barClass: 'bg-slate-400', badgeClass: 'text-slate-600 bg-slate-500/10' },
+    learning: { label: 'Đang học', avatarClass: 'bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white', barClass: 'bg-amber-500', badgeClass: 'text-amber-600 bg-amber-500/10' },
+    completed: { label: 'Đã học', avatarClass: 'bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white', barClass: 'bg-emerald-500', badgeClass: 'text-emerald-600 bg-emerald-500/10' },
+  };
+
   return (
     <Card className="shadow-sm border-border h-full flex flex-col bg-muted/5 backdrop-blur-sm">
       <CardHeader className="p-5 pb-2 border-b border-border/40">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            Cần chú ý
+            <Users className="h-4 w-4 text-primary" />
+            Danh sách Học viên
           </CardTitle>
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-            </span>
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tighter">Chưa hoàn thành</span>
-          </div>
+          {data && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">{data.count.toLocaleString('en-US')} học viên</span>
+            </div>
+          )}
         </div>
         <div className="mt-3 flex gap-2">
           <div className="relative flex-1">
@@ -432,14 +436,14 @@ function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: n
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" className="text-xs">Tất cả</SelectItem>
+              <SelectItem value="not_started" className="text-xs font-medium text-slate-600 focus:text-slate-700">Chưa học</SelectItem>
               <SelectItem value="learning" className="text-xs font-medium text-amber-600 focus:text-amber-700">Đang học</SelectItem>
-              <SelectItem value="stalled" className="text-xs font-medium text-red-600 focus:text-red-700">Ngưng HĐ</SelectItem>
+              <SelectItem value="completed" className="text-xs font-medium text-emerald-600 focus:text-emerald-700">Đã học</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
       <CardContent className="p-0 flex-grow flex flex-col">
-        {/* Trend chart removed as requested */}
         {isLoading ? (
           <div className="p-4 space-y-3 min-h-[200px] overflow-hidden">
             {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
@@ -451,71 +455,66 @@ function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: n
         ) : (
             <div className="divide-y divide-border/40 overflow-y-auto custom-scrollbar max-h-[440px]">
               <AnimatePresence>
-                {data.results.map((u, i) => (
-                  <motion.div key={u.username}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex items-center p-4 hover:bg-muted/50 transition-all cursor-pointer group gap-4"
-                    onClick={() => onSelectLearner(u.username)}
-                  >
-                    {/* User Info Column */}
-                    <div className="flex items-center gap-3 w-[30%] min-w-[140px] shrink-0">
-                      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all ${
-                        u.is_stalled
-                          ? 'bg-red-500/10 text-red-600 group-hover:bg-red-500 group-hover:text-white'
-                          : 'bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white'
-                      }`}>
-                        {u.username.substring(0, 2).toUpperCase()}
+                {data.results.map((u, i) => {
+                  const cfg = statusConfig[u.status] || statusConfig.not_started;
+                  return (
+                    <motion.div key={u.username}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-center p-4 hover:bg-muted/50 transition-all cursor-pointer group gap-4"
+                      onClick={() => onSelectLearner(u.username)}
+                    >
+                      {/* User Info Column */}
+                      <div className="flex items-center gap-3 w-[30%] min-w-[140px] shrink-0">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all ${cfg.avatarClass}`}>
+                          {u.username.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{u.username}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground group-hover:text-amber-600 transition-colors truncate">{u.username}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>
+                      
+                      {/* Course Name Column */}
+                      <div className="flex-1 min-w-0">
+                        {u.course_name ? (
+                          <p className="text-xs text-foreground truncate" title={u.course_name}>
+                            {u.course_name}
+                          </p>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">{u.enrolled_courses > 0 ? `${u.enrolled_courses} khóa học` : 'Chưa đăng ký'}</span>
+                        )}
                       </div>
-                    </div>
-                    
-                    {/* Course Name Column */}
-                    <div className="flex-1 min-w-0">
-                      {u.course_name ? (
-                        <p className="text-xs text-foreground truncate" title={u.course_name}>
-                          {u.course_name}
-                        </p>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">Không có khóa học</span>
-                      )}
-                    </div>
-                    
-                    {/* Progress Column */}
-                    <div className="w-[15%] min-w-[60px] shrink-0 flex flex-col justify-center">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-medium text-foreground">{u.progress}%</span>
+                      
+                      {/* Progress Column */}
+                      <div className="w-[15%] min-w-[60px] shrink-0 flex flex-col justify-center">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-medium text-foreground">{u.progress}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${cfg.barClass}`} 
+                            style={{ width: `${Math.min(u.progress, 100)}%` }} 
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${u.is_stalled ? 'bg-red-500' : 'bg-amber-500'}`} 
-                          style={{ width: `${Math.min(u.progress, 100)}%` }} 
-                        />
-                      </div>
-                    </div>
 
-                    {/* Status Column */}
-                    <div className="w-[20%] min-w-[90px] shrink-0 text-right flex flex-col items-end justify-center">
-                      <div className="flex items-center justify-end gap-1 mb-1">
-                        <Clock className="h-2.5 w-2.5 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground">
-                          {u.last_completion_at
-                            ? new Date(u.last_completion_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                            : 'Chưa học'}
-                        </span>
+                      {/* Status Column */}
+                      <div className="w-[20%] min-w-[90px] shrink-0 text-right flex flex-col items-end justify-center">
+                        <div className="flex items-center justify-end gap-1 mb-1">
+                          <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">
+                            {u.last_completion_at
+                              ? new Date(u.last_completion_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                              : 'Chưa học'}
+                          </span>
+                        </div>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-tighter ${cfg.badgeClass}`}>{cfg.label}</span>
                       </div>
-                      {u.is_stalled ? (
-                        <span className="text-[9px] font-bold text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Ngưng HĐ</span>
-                      ) : (
-                        <span className="text-[9px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Đang học</span>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
         )}

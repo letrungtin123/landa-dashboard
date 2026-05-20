@@ -121,7 +121,7 @@ export async function exportReportExcel(params: ExportParams) {
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
     const summaries: (ReportSummaryResponse | null)[] = [];
     const topCoursesData: Array<{ month: number; rank: number; id: string; name: string; enrollments: number }> = [];
-    const learnersData: Array<{ month: number; stt: number; username: string; email: string; lastCompletionAt: string; progress: number; courseName: string; isStalled: boolean }> = [];
+    const learnersData: Array<{ month: number; stt: number; username: string; email: string; lastCompletionAt: string; progress: number; courseName: string; status: string }> = [];
     const yearlyCourseMap: Record<string, { id: string; name: string; enrollments: number }> = {};
 
     const now = new Date();
@@ -190,7 +190,7 @@ export async function exportReportExcel(params: ExportParams) {
                 : 'Chưa học',
               progress: u.progress ?? 0,
               courseName: u.course_name ?? '',
-              isStalled: u.is_stalled ?? false,
+              status: u.status === 'completed' ? 'Đã học' : u.status === 'learning' ? 'Đang học' : 'Chưa học',
             });
           });
         } else {
@@ -351,21 +351,24 @@ export async function exportReportExcel(params: ExportParams) {
 
     const sorted4 = [...learnersData].sort((a, b) => a.month - b.month || a.stt - b.stt);
     sorted4.forEach((l, i) => {
-      const statusText = l.isStalled ? 'Ngưng hoạt động' : 'Đang học';
+      const statusText = l.status;
       const row = ws4.addRow([`Tháng ${l.month}`, l.stt, l.username, l.email, l.courseName, statusText, l.lastCompletionAt]);
       applyDataRow(row, COL4, i % 2 === 0);
       row.getCell(1).font = { bold: true, size: 10 };
       // Status coloring
       const sCell = row.getCell(6);
-      sCell.font = { size: 10, bold: true, color: { argb: l.isStalled ? COLORS.accentRed : COLORS.accentAmber } };
+      const statusColor = l.status === 'Đã học' ? COLORS.accentGreen : l.status === 'Đang học' ? COLORS.accentAmber : COLORS.subtitleFg;
+      sCell.font = { size: 10, bold: true, color: { argb: statusColor } };
     });
 
     ws4.addRow([]);
     const uniqueLearners = new Set(learnersData.map(l => l.username)).size;
-    const stalledCount = new Set(learnersData.filter(l => l.isStalled).map(l => l.username)).size;
+    const completedCount = new Set(learnersData.filter(l => l.status === 'Đã học').map(l => l.username)).size;
+    const notStartedCount = new Set(learnersData.filter(l => l.status === 'Chưa học').map(l => l.username)).size;
     addSummaryRow(ws4, 'Tổng lượt ghi nhận', learnersData.length.toString(), COL4);
     addSummaryRow(ws4, 'Số học viên (duy nhất)', uniqueLearners.toString(), COL4);
-    addSummaryRow(ws4, 'Số HV ngưng hoạt động', stalledCount.toString(), COL4);
+    addSummaryRow(ws4, 'Số HV đã hoàn thành', completedCount.toString(), COL4);
+    addSummaryRow(ws4, 'Số HV chưa học', notStartedCount.toString(), COL4);
 
     // ═══ SAVE ═══
     const safeName = groupName.replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_');

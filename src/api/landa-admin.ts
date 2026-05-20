@@ -84,13 +84,14 @@ export interface ReportTopCourse {
   enrollments: number;
 }
 
-export interface ReportUncompletedLearner {
+export interface ReportLearnerStatus {
   username: string;
   email: string;
   last_completion_at: string | null;
   progress: number;
   course_name: string;
-  is_stalled: boolean;
+  status: 'not_started' | 'learning' | 'completed';
+  enrolled_courses: number;
 }
 
 export interface ReportPaginatedResponse<T> {
@@ -335,10 +336,13 @@ export async function getReportTopCourses(params?: { page?: number; page_size?: 
   return data;
 }
 
-export async function getReportUncompletedLearners(params?: { page?: number; page_size?: number; search?: string; month?: number; year?: number; group_id?: number | string; status?: 'all' | 'stalled' | 'learning' }): Promise<ReportPaginatedResponse<ReportUncompletedLearner>> {
-  const { data } = await apiClient.get<ReportPaginatedResponse<ReportUncompletedLearner>>(`${BASE}/report-uncompleted-learners/`, { params });
+export async function getReportLearners(params?: { page?: number; page_size?: number; search?: string; month?: number; year?: number; group_id?: number | string; status?: 'all' | 'not_started' | 'learning' | 'completed' }): Promise<ReportPaginatedResponse<ReportLearnerStatus>> {
+  const { data } = await apiClient.get<ReportPaginatedResponse<ReportLearnerStatus>>(`${BASE}/report-uncompleted-learners/`, { params });
   return data;
 }
+
+// Backward-compatible alias
+export const getReportUncompletedLearners = getReportLearners;
 
 // ─────────────────────────────────────────────────────────────────
 // User Management API
