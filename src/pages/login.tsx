@@ -156,9 +156,9 @@ export default function LoginPage() {
       <div className="relative rounded-2xl p-8">
         <div
           className="absolute inset-0 rounded-2xl p-[1px]"
-          style={{ background: `linear-gradient(135deg, color-mix(in srgb, var(--gradient-from) 30%, transparent), transparent, color-mix(in srgb, var(--gradient-to) 30%, transparent))` }}
+          style={{ background: `linear-gradient(135deg, rgba(34,211,238,0.15), transparent 50%, rgba(6,182,212,0.1))` }}
         >
-          <div className="h-full w-full rounded-2xl bg-[#0e1525]/90 backdrop-blur-2xl" />
+          <div className="h-full w-full rounded-2xl bg-[#020a1a]/40 backdrop-blur-md" />
         </div>
         <div className="relative z-10 space-y-5">
           <Form {...form}>
@@ -226,7 +226,7 @@ export default function LoginPage() {
               <span className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#0e1525] px-3 text-white/30 font-medium">hoặc tiếp tục với</span>
+              <span className="bg-transparent px-3 text-white/40 font-medium">hoặc tiếp tục với</span>
             </div>
           </div>
 
