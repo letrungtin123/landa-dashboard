@@ -57,6 +57,12 @@ export const config = {
 
   publicOrigin: (import.meta.env.VITE_PUBLIC_ORIGIN || window.location.origin).trim(),
 
+  /** Keycloak OIDC Authority URL — tùy chọn, không crash nếu thiếu */
+  keycloakAuthority: (import.meta.env.VITE_KEYCLOAK_AUTHORITY || "").trim(),
+
+  /** Keycloak OIDC Client ID — tùy chọn, không crash nếu thiếu */
+  keycloakClientId: (import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "").trim(),
+
   get apiBaseUrl(): string {
     return "";
   },

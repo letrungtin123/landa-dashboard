@@ -7,9 +7,11 @@ import { useAuthStore, StaffAccessDeniedError } from '@/utils/store';
 import { useGoogleLogin } from '@react-oauth/google';
 import { googleLoginOrRegister, GoogleAuthError } from '@/api/googleAuth';
 import { microsoftLoginOrRegister, MicrosoftAuthError } from '@/api/microsoftAuth';
+import { keycloakLogin, KeycloakAuthError } from '@/api/keycloakAuth';
 import { microsoftPopupLogin } from '@/config/msalConfig';
+import { keycloakPopupLogin, getKeycloakRedirectUri } from '@/config/keycloakConfig';
 import { config } from '@/config/env';
-import logoImg from '@/assets/leandassociate.webp';
+import logoImg from '@/assets/WhiteLogoLeftPanel.png';
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -30,10 +32,12 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const loginWithMicrosoft = useAuthStore((s) => s.loginWithMicrosoft);
+  const loginWithKeycloak = useAuthStore((s) => s.loginWithKeycloak);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false);
+  const [isKeycloakLoading, setIsKeycloakLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -56,7 +60,7 @@ export default function LoginPage() {
       toast.error('Truy cập bị từ chối', { description: err.message });
       return;
     }
-    if (err instanceof GoogleAuthError || err instanceof MicrosoftAuthError) {
+    if (err instanceof GoogleAuthError || err instanceof MicrosoftAuthError || err instanceof KeycloakAuthError) {
       toast.error(err.message);
       return;
     }
@@ -121,7 +125,25 @@ export default function LoginPage() {
     }
   }
 
-  const isAnyLoading = isLoading || isGoogleLoading || isMicrosoftLoading;
+  // ── Keycloak login ──
+  async function handleKeycloakLogin() {
+    setIsKeycloakLoading(true);
+    setAuthError(null);
+    try {
+      const { code, codeVerifier } = await keycloakPopupLogin();
+      const redirectUri = getKeycloakRedirectUri();
+      const result = await keycloakLogin(code, redirectUri, codeVerifier);
+      await loginWithKeycloak(result.tokens);
+      toast.success('Đăng nhập SSO thành công');
+      redirectAfterLogin();
+    } catch (err) {
+      handleAuthError(err);
+    } finally {
+      setIsKeycloakLoading(false);
+    }
+  }
+
+  const isAnyLoading = isLoading || isGoogleLoading || isMicrosoftLoading || isKeycloakLoading;
 
   return (
     <motion.div
@@ -137,7 +159,7 @@ export default function LoginPage() {
           animate={{ scale: 1 }}
           transition={{ type: 'spring', delay: 0.2, stiffness: 200, damping: 15 }}
         >
-          <img src={logoImg} alt="L&A Logo" className="h-[4.5rem] w-auto drop-shadow-xl rounded-md" />
+          <img src={logoImg} alt="L&A Logo" className="h-[2.5rem] w-auto drop-shadow-xl mb-3" />
         </motion.div>
       </div>
 
@@ -233,7 +255,7 @@ export default function LoginPage() {
           {/* Social login buttons */}
           <div className="grid grid-cols-2 gap-3">
             {/* Google */}
-            {config.googleClientId && (
+            {/* {config.googleClientId && (
               <Button
                 type="button"
                 variant="outline"
@@ -253,10 +275,10 @@ export default function LoginPage() {
                 )}
                 Google
               </Button>
-            )}
+            )} */}
 
             {/* Microsoft 365 */}
-            {config.microsoftClientId && (
+            {/* {config.microsoftClientId && (
               <Button
                 type="button"
                 variant="outline"
@@ -276,8 +298,28 @@ export default function LoginPage() {
                 )}
                 Microsoft 365
               </Button>
-            )}
+            )} */}
           </div>
+
+          {/* Keycloak SSO */}
+          {config.keycloakClientId && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleKeycloakLogin}
+              disabled={isAnyLoading}
+              className="w-full h-11 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20 cursor-pointer transition-all"
+            >
+              {isKeycloakLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              )}
+              Đăng nhập bằng SSO
+            </Button>
+          )}
         </div>
       </div>
     </motion.div>

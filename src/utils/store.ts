@@ -95,6 +95,7 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>;
   loginWithGoogle: (edxTokens: OAuthTokenResponse) => Promise<void>;
   loginWithMicrosoft: (edxTokens: OAuthTokenResponse) => Promise<void>;
+  loginWithKeycloak: (edxTokens: OAuthTokenResponse) => Promise<void>;
   logout: () => Promise<void>;
   startLogout: () => void;
   performTokenRefresh: () => Promise<boolean>;
@@ -278,6 +279,21 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loginWithMicrosoft: async (edxTokens) => {
+        const tokenType = edxTokens.token_type || 'Bearer';
+        const expiresAt = Date.now() + edxTokens.expires_in * 1000;
+        set({
+          accessToken: edxTokens.access_token,
+          refreshToken: edxTokens.refresh_token,
+          tokenType,
+          tokenExpiresAt: expiresAt,
+        });
+
+        await fetchAndVerifyStaffUser(set, edxTokens.access_token, tokenType);
+        await establishLmsSessionFromToken();
+        get().scheduleTokenRefresh();
+      },
+
+      loginWithKeycloak: async (edxTokens) => {
         const tokenType = edxTokens.token_type || 'Bearer';
         const expiresAt = Date.now() + edxTokens.expires_in * 1000;
         set({
