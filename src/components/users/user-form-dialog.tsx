@@ -33,18 +33,18 @@ import { UserPlus, Pencil } from 'lucide-react';
 import { LandaUser, createAdminUser, updateAdminUser } from '@/api/landa-admin';
 
 const createUserSchema = z.object({
-  username: z.string().min(2, 'Username is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(8, 'Phone number is required'),
-  password: z.string().min(6, 'Min 6 characters'),
+  username: z.string().min(2, 'Tên đăng nhập là bắt buộc'),
+  email: z.string().email('Email không hợp lệ'),
+  phone: z.string().min(8, 'Số điện thoại là bắt buộc'),
+  password: z.string().min(6, 'Tối thiểu 6 ký tự'),
   role: z.enum(['superuser', 'staff', 'learner', 'learner_plus']),
   is_active: z.string().transform(v => v === 'true'),
 });
 
 const updateUserSchema = z.object({
-  username: z.string().min(2, 'Username is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(8, 'Phone number is required'),
+  username: z.string().min(2, 'Tên đăng nhập là bắt buộc'),
+  email: z.string().email('Email không hợp lệ'),
+  phone: z.string().min(8, 'Số điện thoại là bắt buộc'),
   password: z.string().optional().or(z.literal('')),
   role: z.enum(['superuser', 'staff', 'learner', 'learner_plus']),
   is_active: z.string().transform(v => v === 'true'),
@@ -114,15 +114,15 @@ export function UserFormDialog({
 
       if (isEditing) {
         await updateAdminUser(user!.id, payload);
-        toast.success('User updated successfully');
+        toast.success('Đã cập nhật tài khoản');
       } else {
         await createAdminUser(payload);
-        toast.success('User created successfully');
+        toast.success('Đã tạo tài khoản mới');
       }
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       onSuccess();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Something went wrong');
+      toast.error(error.response?.data?.error || 'Có lỗi xảy ra');
     } finally {
       setIsLoading(false);
     }
@@ -141,10 +141,10 @@ export function UserFormDialog({
           </div>
           <div>
             <DialogTitle className="text-[15px] font-semibold">
-              {isEditing ? 'Edit User' : 'New User'}
+              {isEditing ? 'Chỉnh sửa tài khoản' : 'Tạo tài khoản mới'}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-              {isEditing ? `Editing ${user?.username}'s account` : 'Add a new member to the system'}
+              {isEditing ? `Đang chỉnh sửa tài khoản ${user?.username}` : 'Thêm thành viên mới vào hệ thống'}
             </DialogDescription>
           </div>
         </div>
@@ -154,7 +154,7 @@ export function UserFormDialog({
           <form noValidate onSubmit={form.handleSubmit(onSubmit)} className="overflow-y-auto max-h-[60vh]">
             {/* Section: Account */}
             <div className="px-6 pt-5 pb-4">
-              <div className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-[0.12em] mb-3">Account Information</div>
+              <div className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-[0.12em] mb-3">Thông tin tài khoản</div>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
@@ -162,9 +162,9 @@ export function UserFormDialog({
                     name="username"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-medium text-muted-foreground">Username</FormLabel>
+                        <FormLabel className="text-xs font-medium text-muted-foreground">Tên đăng nhập</FormLabel>
                         <FormControl>
-                          <Input disabled={isEditing} placeholder="johndoe" {...field} className="h-9 text-sm" />
+                          <Input disabled={isEditing} placeholder="nguyenvana" {...field} className="h-9 text-sm" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -178,7 +178,7 @@ export function UserFormDialog({
                         <FormLabel className="text-xs font-medium text-muted-foreground">Email</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="john@company.com"
+                            placeholder="email@congty.com"
                             {...field}
                             className="h-9 text-sm"
                           />
@@ -188,14 +188,14 @@ export function UserFormDialog({
                     )}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-medium text-muted-foreground">Phone Number</FormLabel>
+                        <FormLabel className="text-xs font-medium text-muted-foreground">Số điện thoại</FormLabel>
                         <FormControl>
                           <Input placeholder="0123456789" {...field} className="h-9 text-sm" />
                         </FormControl>
@@ -209,8 +209,8 @@ export function UserFormDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs font-medium text-muted-foreground">
-                          {isEditing ? 'New Password' : 'Password'}
-                          {isEditing && <span className="text-muted-foreground/40 ml-1 font-normal">— leave blank</span>}
+                          {isEditing ? 'Mật khẩu mới' : 'Mật khẩu'}
+                          {isEditing && <span className="text-muted-foreground/40 ml-1 font-normal">— bỏ trống nếu không đổi</span>}
                         </FormLabel>
                         <FormControl>
                           <PasswordInput placeholder="••••••••" {...field} className="h-9 text-sm" />
@@ -228,7 +228,7 @@ export function UserFormDialog({
 
             {/* Section: Access Control */}
             <div className="px-6 pt-4 pb-5">
-              <div className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-[0.12em] mb-3">Access Control</div>
+              <div className="text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-[0.12em] mb-3">Phân quyền</div>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <FormField
@@ -236,11 +236,11 @@ export function UserFormDialog({
                     name="role"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-medium text-muted-foreground">Role</FormLabel>
+                        <FormLabel className="text-xs font-medium text-muted-foreground">Vai trò</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-9 text-sm">
-                              <SelectValue placeholder="Select role" />
+                              <SelectValue placeholder="Chọn vai trò" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -283,24 +283,24 @@ export function UserFormDialog({
                     name="is_active"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-medium text-muted-foreground">Status</FormLabel>
+                        <FormLabel className="text-xs font-medium text-muted-foreground">Trạng thái</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-9 text-sm">
-                              <SelectValue placeholder="Select status" />
+                              <SelectValue placeholder="Chọn trạng thái" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="true">
                               <span className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                Active
+                                Hoạt động
                               </span>
                             </SelectItem>
                             <SelectItem value="false">
                               <span className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                                Inactive
+                                Đã khóa
                               </span>
                             </SelectItem>
                           </SelectContent>
@@ -321,14 +321,14 @@ export function UserFormDialog({
                 onClick={() => onOpenChange(false)}
                 className="h-9 px-4 text-[13px]"
               >
-                Cancel
+                Hủy
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading}
                 className="h-9 px-5 text-[13px] transition-all duration-200 active:scale-[0.97]"
               >
-                {isLoading ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create User')}
+                {isLoading ? (isEditing ? 'Đang lưu...' : 'Đang tạo...') : (isEditing ? 'Lưu thay đổi' : 'Tạo tài khoản')}
               </Button>
             </div>
           </form>

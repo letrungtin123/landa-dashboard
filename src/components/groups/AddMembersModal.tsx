@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useQuery } from '@tanstack/react-query';
 import { getAdminUsers, type LandaUser } from '@/api/landa-admin';
@@ -29,7 +30,7 @@ export function AddMembersModal({ open, sgId, existingMemberIds, onOpenChange, o
 
   const { data, isFetching } = useQuery({
     queryKey: ['users-for-group', debouncedSearch, page],
-    queryFn: () => getAdminUsers({ page, page_size: 20, search: debouncedSearch, role: 'learner' }),
+    queryFn: () => getAdminUsers({ page, page_size: 20, search: debouncedSearch, role: 'learner,learner_plus' }),
     enabled: open,
     staleTime: 0,
   });
@@ -89,8 +90,17 @@ export function AddMembersModal({ open, sgId, existingMemberIds, onOpenChange, o
 
         <div className="max-h-72 overflow-y-auto border border-border rounded-lg divide-y divide-border">
           {isFetching ? (
-            <div className="flex items-center justify-center h-24">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <div className="divide-y divide-border">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <Skeleton className="w-5 h-5 rounded shrink-0" />
+                  <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <Skeleton className="h-3.5 w-24 rounded" />
+                    <Skeleton className="h-3 w-36 rounded" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : users.length === 0 ? (
             <div className="flex items-center justify-center h-24 text-sm text-muted-foreground">
@@ -114,9 +124,13 @@ export function AddMembersModal({ open, sgId, existingMemberIds, onOpenChange, o
                   }`}>
                   {(isSelected || isExisting) && <UserCheck className="h-3 w-3 text-white" />}
                 </div>
-                <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-semibold shrink-0">
-                  {u.username[0]?.toUpperCase()}
-                </div>
+                {u.avatar ? (
+                  <img src={u.avatar} alt={u.username} className="w-8 h-8 rounded-full object-cover border border-border shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-semibold shrink-0">
+                    {u.username[0]?.toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{u.username}</p>
                   <p className="text-xs text-muted-foreground truncate">{u.email}</p>

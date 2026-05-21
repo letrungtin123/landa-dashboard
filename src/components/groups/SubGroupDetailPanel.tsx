@@ -345,9 +345,13 @@ export function SubGroupDetailPanel({ sgId }: Props) {
                       checked={selectedMembers.includes(m.id)}
                       onCheckedChange={() => toggleMember(m.id)}
                     />
-                    <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
-                      {m.username[0]?.toUpperCase()}
-                    </div>
+                    {m.avatar ? (
+                      <img src={m.avatar} alt={m.username} className="w-8 h-8 rounded-full object-cover border border-border shrink-0" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
+                        {m.username[0]?.toUpperCase()}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{m.username}</p>
                       <p className="text-xs text-muted-foreground truncate">{m.email}</p>

@@ -467,9 +467,13 @@ function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: n
                     >
                       {/* User Info Column */}
                       <div className="flex items-center gap-3 w-[30%] min-w-[140px] shrink-0">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all ${cfg.avatarClass}`}>
-                          {u.username.substring(0, 2).toUpperCase()}
-                        </div>
+                        {u.avatar ? (
+                          <img src={u.avatar} alt={u.username} className="h-8 w-8 rounded-full object-cover border border-border shrink-0" />
+                        ) : (
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all ${cfg.avatarClass}`}>
+                            {u.username.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{u.username}</p>
                           <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>
@@ -549,8 +553,9 @@ export default function ReportSummaryPage() {
 
   const user = useAuthStore((s) => s.user);
   const isSuperadmin = user?.role === 'superadmin' || user?.isSuperuser === true;
+  const isStaff = user?.isStaff === true || user?.role === 'staff' || user?.role === 'admin';
   const isLearnerPlus = user?.role === 'learner_plus';
-  const canViewReport = isSuperadmin || isLearnerPlus;
+  const canViewReport = isSuperadmin || isStaff || isLearnerPlus;
 
   // learner_plus: auto-set group từ membership, không fetch all groups
   const learnerPlusGroupId = user?.memberGroupIds?.[0];
@@ -558,7 +563,7 @@ export default function ReportSummaryPage() {
   const { data: groupsData } = useQuery({
     queryKey: ['admin-groups-list'],
     queryFn: () => getOrgGroups({ page_size: 100 }),
-    enabled: isSuperadmin,
+    enabled: isSuperadmin || isStaff,
   });
 
   // learner_plus groups data giả lập từ auth store
@@ -579,7 +584,7 @@ export default function ReportSummaryPage() {
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['report-summary', selectedMonth, selectedYear, selectedGroupId],
     queryFn: () => getReportSummary({ month: selectedMonth, year: selectedYear, group_id: selectedGroupId === 'all' ? undefined : selectedGroupId }),
-    enabled: canViewReport && (isSuperadmin || selectedGroupId !== 'all'),
+    enabled: canViewReport && (isSuperadmin || isStaff || selectedGroupId !== 'all'),
   });
 
   const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
@@ -588,7 +593,7 @@ export default function ReportSummaryPage() {
   const { data: prevData } = useQuery({
     queryKey: ['report-summary', prevMonth, prevMonthYear, selectedGroupId],
     queryFn: () => getReportSummary({ month: prevMonth, year: prevMonthYear, group_id: selectedGroupId === 'all' ? undefined : selectedGroupId }),
-    enabled: canViewReport && (isSuperadmin || selectedGroupId !== 'all'),
+    enabled: canViewReport && (isSuperadmin || isStaff || selectedGroupId !== 'all'),
   });
 
   const handleExport = async () => {
@@ -741,8 +746,8 @@ export default function ReportSummaryPage() {
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-1 shrink-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto rounded-lg custom-scrollbar">
-              {/* Superadmin: hiện 'Tất cả' + all groups */}
-              {isSuperadmin && (
+              {/* Superadmin / Staff: hiện 'Tất cả' + all groups */}
+              {(isSuperadmin || isStaff) && (
                 <DropdownMenuItem
                   onClick={() => setSelectedGroupId('all')}
                   className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedGroupId === 'all' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
@@ -751,8 +756,8 @@ export default function ReportSummaryPage() {
                   <div className={`w-1.5 h-1.5 rounded-full transition-colors ${selectedGroupId === 'all' ? 'bg-foreground' : 'bg-transparent'}`} />
                 </DropdownMenuItem>
               )}
-              {/* Superadmin: list all groups from API */}
-              {isSuperadmin && groupsData?.groups.map(g => (
+              {/* Superadmin / Staff: list all groups from API */}
+              {(isSuperadmin || isStaff) && groupsData?.groups.map(g => (
                 <DropdownMenuItem
                   key={g.id}
                   onClick={() => setSelectedGroupId(g.id)}

@@ -87,6 +87,7 @@ export interface ReportTopCourse {
 export interface ReportLearnerStatus {
   username: string;
   email: string;
+  avatar?: string;
   last_completion_at: string | null;
   progress: number;
   course_name: string;
@@ -356,6 +357,7 @@ export interface LandaUser {
   role: 'superuser' | 'staff' | 'learner' | 'learner_plus';
   is_active: boolean;
   date_joined: string;
+  avatar?: string;
 }
 
 export async function getAdminUsers(params: { 

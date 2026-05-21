@@ -32,6 +32,7 @@ export interface SubGroupMember {
   id: number;
   username: string;
   email: string;
+  avatar?: string;
   added_at: string;
 }
 

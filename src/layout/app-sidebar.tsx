@@ -95,9 +95,14 @@ export function AppSidebar() {
       return item.module === 'report_summary';
     }
     
-    // Restrict Audit Logs and Reports to Superusers only
-    if (item.module === 'audit_log' || item.module === 'report_summary') {
+    // Restrict Audit Logs to Superusers only
+    if (item.module === 'audit_log') {
       return !!user.isSuperuser;
+    }
+
+    // Report Summary: superuser + staff/admin đều được xem
+    if (item.module === 'report_summary') {
+      return !!user.isSuperuser || user.isStaff || user.role === 'staff' || user.role === 'admin';
     }
     
     return true;

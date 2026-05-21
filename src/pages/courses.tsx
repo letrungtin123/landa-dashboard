@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function CoursesPage() {
-  useHeaderInfo('Courses');
+  useHeaderInfo('Khóa Học');
 
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -184,25 +184,25 @@ export default function CoursesPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium">Org</label>
+                <label className="text-sm font-medium">Tổ chức</label>
                 <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={newOrg} onChange={e => setNewOrg(e.target.value)} placeholder="LAndA2" />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Course Number</label>
+                <label className="text-sm font-medium">Mã khóa học</label>
                 <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={newNumber} onChange={e => setNewNumber(e.target.value)} placeholder="000010" />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium">Run (năm)</label>
+                <label className="text-sm font-medium">Đợt (năm)</label>
                 <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={newRun} onChange={e => setNewRun(e.target.value)} placeholder="2026" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Course ID sẽ là: <span className="font-mono font-semibold">course-v1:{newOrg}+{newNumber}+{newRun}</span></p>
-            <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-2 rounded-md">💡 Start date được đặt là 01/01/2020 để course tự động publish và hiển thị cho học viên.</p>
+            <p className="text-xs text-muted-foreground">Mã khóa học sẽ là: <span className="font-mono font-semibold">course-v1:{newOrg}+{newNumber}+{newRun}</span></p>
+            <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-2 rounded-md">💡 Ngày bắt đầu được đặt là 01/01/2020 để khóa học tự động xuất bản và hiển thị cho học viên.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>Hủy</Button>
             <Button onClick={() => createMut.mutate()} disabled={createMut.isPending || !newName || !newNumber || !newOrg || !newRun}>
-              {createMut.isPending ? 'Đang tạo...' : 'Tạo Course'}
+              {createMut.isPending ? 'Đang tạo...' : 'Tạo khóa học'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -290,7 +290,7 @@ export default function CoursesPage() {
               </>
             )}
             <Button size="sm" onClick={() => setShowCreate(true)} className="h-8 text-xs gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> Tạo Course
+              <Plus className="h-3.5 w-3.5" /> Tạo khóa học
             </Button>
           </div>
         }
@@ -308,7 +308,7 @@ export default function CoursesPage() {
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Khóa học</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Tổ chức</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Trạng thái</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Bắt đầu</TableHead>
+
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Kết thúc</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Cập nhật</TableHead>
                 <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider text-right pr-5">Thao tác</TableHead>
@@ -322,7 +322,7 @@ export default function CoursesPage() {
                     <TableCell><div className="space-y-1"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-52" /></div></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -330,7 +330,7 @@ export default function CoursesPage() {
                 ))
               ) : courses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={7} className="h-32 text-center">
                     <div className="flex flex-col items-center text-muted-foreground">
                       <GraduationCap className="w-8 h-8 mb-2 opacity-20" />
                       <p className="text-sm">Chưa có khóa học</p>
@@ -366,9 +366,8 @@ export default function CoursesPage() {
                         {course.visible_to_staff_only ? 'Đã lưu trữ' : 'Đang hoạt động'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{course.start}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{course.end}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{course.modified}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{course.modified || '—'}</TableCell>
                     <TableCell className="text-right pr-5 flex justify-end gap-1">
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -379,7 +378,7 @@ export default function CoursesPage() {
                             <LayoutTemplate className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Xem preview Card</TooltipContent>
+                        <TooltipContent>Xem thẻ xem trước</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -404,7 +403,7 @@ export default function CoursesPage() {
                             <FolderOpen className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Quản lý File (Files & Uploads)</TooltipContent>
+                        <TooltipContent>Quản lý tệp tin</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -440,7 +439,7 @@ export default function CoursesPage() {
                             <Settings2 className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Cấu hình Modal</TooltipContent>
+                        <TooltipContent>Cấu hình hộp thoại</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -562,7 +561,7 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Cấu hình Modal — Khóa học</DialogTitle>
+          <DialogTitle className="text-xl">Cấu hình hộp thoại — Khóa học</DialogTitle>
           <p className="text-xs text-muted-foreground font-mono break-all">{courseId}</p>
         </DialogHeader>
 
@@ -577,7 +576,7 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
             {/* ── Welcome Modal ── */}
             <div className="space-y-3 rounded-lg border border-border p-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Welcome Modal (Chào mừng)</Label>
+                <Label className="text-sm font-semibold">Hộp thoại chào mừng</Label>
                 <Switch
                   checked={form.welcome_enabled}
                   onCheckedChange={(v) => updateField('welcome_enabled', v)}
@@ -598,7 +597,7 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
             {/* ── Confirm Modal ── */}
             <div className="space-y-3 rounded-lg border border-border p-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Confirm Modal (0% tiến độ)</Label>
+                <Label className="text-sm font-semibold">Hộp thoại xác nhận (0% tiến độ)</Label>
                 <Switch
                   checked={form.confirm_enabled}
                   onCheckedChange={(v) => updateField('confirm_enabled', v)}
@@ -614,7 +613,7 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
                   <textarea className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none" placeholder="Cảm ơn bạn đã nỗ lực hoàn thành chương trình đào tạo..." value={form.confirm_description || ''} onChange={e => updateField('confirm_description', e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Nội dung checkbox {form.confirm_enabled && <span className="text-red-500">*</span>}</label>
+                  <label className="text-xs text-muted-foreground">Nội dung ô đánh dấu {form.confirm_enabled && <span className="text-red-500">*</span>}</label>
                   <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" placeholder="Tôi xác nhận đã hoàn thành khóa học..." value={form.confirm_checkbox_text || ''} onChange={e => updateField('confirm_checkbox_text', e.target.value)} />
                 </div>
               </div>
@@ -623,7 +622,7 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
             {/* ── Completion Modal ── */}
             <div className="space-y-3 rounded-lg border border-border p-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Completion Modal (100% tiến độ)</Label>
+                <Label className="text-sm font-semibold">Hộp thoại hoàn thành (100% tiến độ)</Label>
                 <Switch
                   checked={form.completion_enabled}
                   onCheckedChange={(v) => updateField('completion_enabled', v)}
@@ -632,7 +631,7 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
               <div className="space-y-2">
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Tiêu đề {form.completion_enabled && <span className="text-red-500">*</span>}</label>
-                  <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" placeholder="Congratulations!" value={form.completion_title || ''} onChange={e => updateField('completion_title', e.target.value)} />
+                  <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" placeholder="Chúc mừng!" value={form.completion_title || ''} onChange={e => updateField('completion_title', e.target.value)} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Mô tả {form.completion_enabled && <span className="text-red-500">*</span>}</label>
@@ -693,7 +692,7 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
                       </DropdownMenu>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Đường dẫn (Link)</label>
+                      <label className="text-xs text-muted-foreground">Đường dẫn</label>
                       <input 
                         className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm ${!isValidUrl(form.completion_social_link || '') ? 'border-red-500 focus-visible:ring-red-500/30 text-red-600' : 'border-input'}`} 
                         placeholder="https://..." 

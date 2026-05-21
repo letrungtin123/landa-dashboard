@@ -35,7 +35,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function UsersPage() {
-  useHeaderInfo('Accounts');
+  useHeaderInfo('Tài Khoản');
 
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState('');
@@ -92,22 +92,22 @@ export default function UsersPage() {
   const deactivateMutation = useMutation({
     mutationFn: (id: number) => updateAdminUser(id, { is_active: false }),
     onSuccess: () => {
-      toast.success('User deactivated successfully');
+      toast.success('Đã vô hiệu hóa tài khoản');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to deactivate user');
+      toast.error(error.response?.data?.error || 'Vô hiệu hóa thất bại');
     }
   });
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => updateAdminUser(id, { is_active: true }),
     onSuccess: () => {
-      toast.success('Account approved successfully');
+      toast.success('Đã duyệt tài khoản');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to approve user');
+      toast.error(error.response?.data?.error || 'Duyệt tài khoản thất bại');
     }
   });
 
@@ -127,8 +127,8 @@ export default function UsersPage() {
 
   const handleDeactivate = (user: LandaUser) => {
     confirmDialog({
-      title: 'Deactivate User',
-      description: `Are you sure you want to deactivate ${user.username}? They will no longer be able to log in.`,
+      title: 'Vô hiệu hóa tài khoản',
+      description: `Bạn có chắc muốn vô hiệu hóa ${user.username}? Người dùng này sẽ không thể đăng nhập.`,
       variant: 'destructive',
       onConfirm: () => deactivateMutation.mutate(user.id),
     });
@@ -141,21 +141,21 @@ export default function UsersPage() {
       <TableToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search by username or email..."
+        searchPlaceholder="Tìm theo tên hoặc email..."
         filters={[
           {
             key: 'group',
-            placeholder: 'Group',
+            placeholder: 'Nhóm',
             options: groupsData?.groups?.map(g => ({ value: g.id.toString(), label: g.name })) || [],
           },
           ...(groupFilter !== 'all' ? [{
             key: 'subgroup',
-            placeholder: 'Subgroup',
+            placeholder: 'Nhóm con',
             options: subgroupsData?.subgroups?.map(sg => ({ value: sg.id.toString(), label: sg.name })) || [],
           }] : []),
           {
             key: 'role',
-            placeholder: 'Roles',
+            placeholder: 'Vai trò',
             options: [
               { value: 'superuser', label: 'Superuser' },
               { value: 'staff', label: 'Staff' },
@@ -165,10 +165,10 @@ export default function UsersPage() {
           },
           {
             key: 'status',
-            placeholder: 'Status',
+            placeholder: 'Trạng thái',
             options: [
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' },
+              { value: 'active', label: 'Hoạt động' },
+              { value: 'inactive', label: 'Đã khóa' },
               { value: 'pending', label: 'Chờ duyệt' },
             ],
           },
@@ -187,7 +187,7 @@ export default function UsersPage() {
         actions={
           canAdd && (
             <Button onClick={() => { setSelectedUser(undefined); setIsDialogOpen(true); }} className="shadow-sm">
-              <Plus className="mr-2 h-4 w-4" /> Add User
+              <Plus className="mr-2 h-4 w-4" /> Thêm tài khoản
             </Button>
           )
         }
@@ -198,12 +198,12 @@ export default function UsersPage() {
           <Table>
             <TableHeader className="bg-muted/10">
               <TableRow className="hover:bg-transparent border-border">
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider h-11 pl-5">User</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Role</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Phone</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Status</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Joined</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider text-right pr-5">Actions</TableHead>
+                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider h-11 pl-5">Người dùng</TableHead>
+                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Vai trò</TableHead>
+                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Điện thoại</TableHead>
+                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Trạng thái</TableHead>
+                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Ngày tham gia</TableHead>
+                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider text-right pr-5">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className={isFetching && users.length > 0 ? "opacity-50 pointer-events-none transition-opacity duration-200" : "transition-opacity duration-200"}>
@@ -223,8 +223,8 @@ export default function UsersPage() {
                   <TableCell colSpan={6} className="h-48 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <UsersIcon className="w-10 h-10 mb-3 opacity-20" />
-                      <p className="text-sm font-medium">No users found</p>
-                      <p className="text-xs mt-1 text-muted-foreground/70">Try adjusting your search or filters.</p>
+                      <p className="text-sm font-medium">Không tìm thấy người dùng</p>
+                      <p className="text-xs mt-1 text-muted-foreground/70">Hãy thử thay đổi từ khóa hoặc bộ lọc.</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -245,9 +245,13 @@ export default function UsersPage() {
                     <TableRow key={u.id} className="group hover:bg-muted/30 transition-colors border-border">
                       <TableCell className="pl-5 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 flex-shrink-0 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground font-semibold text-xs transition-colors">
-                            {u.username?.[0]?.toUpperCase() || 'U'}
-                          </div>
+                          {u.avatar ? (
+                            <img src={u.avatar} alt={u.username} className="w-9 h-9 flex-shrink-0 rounded-full object-cover border border-border" />
+                          ) : (
+                            <div className="w-9 h-9 flex-shrink-0 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground font-semibold text-xs transition-colors">
+                              {u.username?.[0]?.toUpperCase() || 'U'}
+                            </div>
+                          )}
                           <div className="flex flex-col min-w-0">
                             <span className="font-medium text-sm text-foreground truncate">{u.username}</span>
                             <span className="text-xs text-muted-foreground truncate">{u.email}</span>
@@ -264,16 +268,16 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={`font-medium shadow-none font-sans ${STATUS_COLORS[displayStatus]}`}>
-                          <span className="capitalize">{displayStatus === 'pending' ? 'Chờ duyệt' : statusKey}</span>
+                          <span className="capitalize">{displayStatus === 'pending' ? 'Chờ duyệt' : statusKey === 'active' ? 'Hoạt động' : 'Đã khóa'}</span>
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {u.date_joined ? format(new Date(u.date_joined), 'MMM d, yyyy') : '-'}
+                        {u.date_joined ? format(new Date(u.date_joined), 'dd/MM/yyyy') : '-'}
                       </TableCell>
                       <TableCell className="text-right pr-5">
                         <div className="flex items-center justify-end gap-1">
                           {!canEditDelete ? (
-                            <span title="Permission Denied">
+                            <span title="Không có quyền">
                               <ShieldAlert className="h-4 w-4 text-muted-foreground/50" />
                             </span>
                           ) : (
@@ -298,12 +302,12 @@ export default function UsersPage() {
                                 </Button>
                               )}
                               <Button variant="ghost" size="icon" onClick={() => { setSelectedUser(u); setIsDialogOpen(true); }}
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-md" title="Edit User">
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-md" title="Chỉnh sửa">
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
                               {u.is_active && (
                                 <Button variant="ghost" size="icon" onClick={() => handleDeactivate(u)}
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-md" title="Deactivate User">
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors rounded-md" title="Vô hiệu hóa">
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               )}
@@ -319,7 +323,7 @@ export default function UsersPage() {
           </Table>
         </div>
 
-        <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={setLimit} label="users" />
+        <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={setLimit} label="tài khoản" />
       </div>
 
       <UserFormDialog
