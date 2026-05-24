@@ -25,6 +25,12 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ── Maps (giống FE-5173) ──
+const ROLE_LABEL: Record<string, string> = {
+  superadmin: 'Super Admin',
+  admin: 'Quản trị viên',
+  staff: 'Nhân viên',
+  learner_plus: 'Quản lý nhóm',
+};
 const GENDER_MAP: Record<string, string> = { m: 'Nam', f: 'Nữ', o: 'Khác' };
 const COUNTRY_MAP: Record<string, string> = { VN: 'Việt Nam', US: 'Hoa Kỳ', JP: 'Nhật Bản', KR: 'Hàn Quốc', GB: 'Anh', OTHER: 'Khác' };
 const EDU_MAP: Record<string, string> = { p: 'Tiến sĩ', m: 'Thạc sĩ', b: 'Cử nhân', a: 'Cao đẳng', hs: 'THPT', jhs: 'THCS', el: 'Tiểu học', none: 'Không có', other: 'Khác' };
@@ -300,8 +306,19 @@ export default function ProfilePage() {
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1.5 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {profileData?.email || user?.email}</span>
                     <span className="hidden sm:inline text-border">•</span>
-                    <Badge variant="outline" className="text-xs uppercase tracking-wider font-semibold">
-                      <Shield className="w-3 h-3 mr-1" />{user?.role}
+                    <Badge
+                      variant="outline"
+                      className={`text-xs uppercase tracking-wider font-semibold ${
+                        user?.role === 'superadmin'
+                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          : user?.role === 'admin'
+                            ? 'border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                            : user?.role === 'learner_plus'
+                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                              : ''
+                      }`}
+                    >
+                      <Shield className="w-3 h-3 mr-1" />{ROLE_LABEL[user?.role || ''] || user?.role}
                     </Badge>
                   </div>
                 </div>

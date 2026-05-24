@@ -66,8 +66,16 @@ export default function HelpPageEditor({ pageId, isSuperuser }: HelpPageEditorPr
 
   const handlePublishToggle = useCallback(() => {
     if (!page) return;
-    saveMut.mutate({ is_published: !page.is_published });
-  }, [page, saveMut]);
+    // Nếu đang edit và có thay đổi chưa lưu → gửi kèm title + content
+    const payload: { title?: string; content?: string; is_published: boolean } = {
+      is_published: !page.is_published,
+    };
+    if (hasChanges) {
+      payload.title = title;
+      payload.content = content;
+    }
+    saveMut.mutate(payload);
+  }, [page, saveMut, hasChanges, title, content]);
 
   const handleImageUpload = useCallback(async (file: File) => {
     try {

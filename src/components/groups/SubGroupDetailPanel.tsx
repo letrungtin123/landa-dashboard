@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, BookPlus, Trash2, Users, BookOpen, Loader2, FolderOpen, FolderPlus, FolderKanban, Eye } from 'lucide-react';
+import { UserPlus, BookPlus, Trash2, Users, BookOpen, Loader2, FolderOpen, FolderPlus, FolderKanban, Eye, FileText, FileImage, FileSpreadsheet, FileType, Film } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import {
   getSubGroupDetail, removeMember, revokeCourse, revokeCategory, revokeCourseCategory,
   type SubGroupDetail,
 } from '@/api/landa-groups';
-import { getCourseCategoryCourses } from '@/api/landa-admin';
+import { getCourseCategoryCourses, getDocuments } from '@/api/landa-admin';
 import { AddMembersModal } from './AddMembersModal';
 import { AssignCoursesModal } from './AssignCoursesModal';
 import { AssignCategoriesModal } from './AssignCategoriesModal';
@@ -30,6 +30,31 @@ interface Props {
 
 type Tab = 'members' | 'courses' | 'categories' | 'course_categories';
 
+// Icon & color theo extension (reuse pattern từ documents-tab)
+const EXT_ICONS: Record<string, React.ElementType> = {
+  pdf: FileText, docx: FileText, doc: FileText,
+  xlsx: FileSpreadsheet, xls: FileSpreadsheet,
+  pptx: FileType, ppt: FileType,
+  mp4: Film,
+  jpg: FileImage, jpeg: FileImage, png: FileImage,
+};
+
+const EXT_COLORS: Record<string, string> = {
+  pdf: 'text-red-500', docx: 'text-blue-500', doc: 'text-blue-500',
+  xlsx: 'text-emerald-500', xls: 'text-emerald-500',
+  pptx: 'text-orange-500', ppt: 'text-orange-500',
+  mp4: 'text-purple-500',
+  jpg: 'text-pink-500', jpeg: 'text-pink-500', png: 'text-pink-500',
+};
+
+const EXT_BG: Record<string, string> = {
+  pdf: 'bg-red-500/10', docx: 'bg-blue-500/10', doc: 'bg-blue-500/10',
+  xlsx: 'bg-emerald-500/10', xls: 'bg-emerald-500/10',
+  pptx: 'bg-orange-500/10', ppt: 'bg-orange-500/10',
+  mp4: 'bg-purple-500/10',
+  jpg: 'bg-pink-500/10', jpeg: 'bg-pink-500/10', png: 'bg-pink-500/10',
+};
+
 // Tabs hiển thị trên UI (ẩn tab courses vì tạm không dùng phân course lẻ)
 const VISIBLE_TABS: Tab[] = ['members', 'categories', 'course_categories'];
 
@@ -40,6 +65,7 @@ export function SubGroupDetailPanel({ sgId }: Props) {
   const [assignCategoriesOpen, setAssignCategoriesOpen] = useState(false);
   const [assignCourseCategoriesOpen, setAssignCourseCategoriesOpen] = useState(false);
   const [previewCatId, setPreviewCatId] = useState<number | null>(null);
+  const [previewFileCatId, setPreviewFileCatId] = useState<number | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
@@ -474,10 +500,15 @@ export function SubGroupDetailPanel({ sgId }: Props) {
             ) : (
               <div className="divide-y divide-border">
                 {sg.categories.map(c => (
-                  <div key={c.category_id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 group">
+                  <div
+                    key={c.category_id}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 group cursor-pointer"
+                    onClick={() => setPreviewFileCatId(c.category_id)}
+                  >
                     <Checkbox
                       checked={selectedCategories.includes(c.category_id)}
                       onCheckedChange={() => toggleCategory(c.category_id)}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     />
                     <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
                       <FolderOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -485,11 +516,12 @@ export function SubGroupDetailPanel({ sgId }: Props) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
                     </div>
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
                     <span className="text-[11px] text-muted-foreground/60 hidden group-hover:block shrink-0">
                       {format(new Date(c.assigned_at), 'dd/MM/yyyy')}
                     </span>
                     <button
-                      onClick={() => handleRevokeCategory(c.category_id, c.name)}
+                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleRevokeCategory(c.category_id, c.name); }}
                       disabled={revokeCategoryMutation.isPending}
                       className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                     >
@@ -620,6 +652,12 @@ export function SubGroupDetailPanel({ sgId }: Props) {
         catName={sg.course_categories.find(c => c.category_id === previewCatId)?.name || ''}
         onClose={() => setPreviewCatId(null)}
       />
+      {/* Preview files in category modal */}
+      <FileCategoryPreviewModal
+        catId={previewFileCatId}
+        catName={sg.categories.find(c => c.category_id === previewFileCatId)?.name || ''}
+        onClose={() => setPreviewFileCatId(null)}
+      />
     </div>
   );
 }
@@ -671,6 +709,67 @@ function CourseCategoryPreviewModal({ catId, catName, onClose }: { catId: number
                 </div>
               </div>
             ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+// ═══════════════════════════════════════
+// Modal xem danh sách files trong 1 danh mục
+// ═══════════════════════════════════════
+
+function FileCategoryPreviewModal({ catId, catName, onClose }: { catId: number | null; catName: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['file-category-files-preview', catId],
+    queryFn: () => getDocuments({ category_id: catId!, page: 1, page_size: 100 }),
+    enabled: catId !== null && catId > 0,
+  });
+
+  const files = data?.data ?? [];
+
+  return (
+    <Dialog open={catId !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[70vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FolderOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            {catName}
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground">{files.length} files trong danh mục</p>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto border rounded-lg divide-y min-h-[120px] max-h-[400px]">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : files.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground/20 mb-2" />
+              <p className="text-sm text-muted-foreground">Chưa có file nào trong danh mục</p>
+            </div>
+          ) : (
+            files.map(f => {
+              const Icon = EXT_ICONS[f.extension] || FileText;
+              const color = EXT_COLORS[f.extension] || 'text-muted-foreground';
+              const bg = EXT_BG[f.extension] || 'bg-muted';
+              return (
+                <div key={f.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className={`w-7 h-7 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`h-3.5 w-3.5 ${color}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{f.title}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {f.extension.toUpperCase()} · {f.file_size_display}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </DialogContent>

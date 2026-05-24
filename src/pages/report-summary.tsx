@@ -80,7 +80,7 @@ function ChartTrendModal({
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['report-chart', year, metricKey, groupId],
-    queryFn: () => getReportChart(year, metricKey!, groupId === 'all' ? undefined : groupId),
+    queryFn: () => getReportChart(year, metricKey!, groupId === 'all' ? undefined : groupId, false, false),
     enabled: !!metricKey && isOpen,
   });
 
