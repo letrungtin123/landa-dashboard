@@ -320,26 +320,27 @@ export const getLearnerDetail = async (username: string, page = 1, search = ''):
   return response.data;
 };
 
-export async function getReportSummary(params?: { month?: number; year?: number; group_id?: number | string }): Promise<ReportSummaryResponse> {
+export async function getReportSummary(params?: { month?: number; year?: number; group_id?: number | string; subgroup_id?: number | string }): Promise<ReportSummaryResponse> {
   const { data } = await apiClient.get<ReportSummaryResponse>(`${BASE}/report-summary/`, { params });
   return data;
 }
 
-export async function getReportChart(year: number, metric: string, group_id?: number | string, group_by_org?: boolean, grouped?: boolean): Promise<ReportChartResponse> {
+export async function getReportChart(year: number, metric: string, group_id?: number | string, group_by_org?: boolean, grouped?: boolean, subgroup_id?: number | string): Promise<ReportChartResponse> {
   const params: any = { year, metric };
   if (group_id) params.group_id = group_id;
+  if (subgroup_id) params.subgroup_id = subgroup_id;
   if (group_by_org) params.group_by_org = true;
   if (grouped === false) params.grouped = 'false';
   const { data } = await apiClient.get<ReportChartResponse>(`${BASE}/report-chart/`, { params });
   return data;
 }
 
-export async function getReportTopCourses(params?: { page?: number; page_size?: number; month?: number; year?: number; group_id?: number | string }): Promise<ReportPaginatedResponse<ReportTopCourse>> {
+export async function getReportTopCourses(params?: { page?: number; page_size?: number; month?: number; year?: number; group_id?: number | string; subgroup_id?: number | string }): Promise<ReportPaginatedResponse<ReportTopCourse>> {
   const { data } = await apiClient.get<ReportPaginatedResponse<ReportTopCourse>>(`${BASE}/report-top-courses/`, { params });
   return data;
 }
 
-export async function getReportLearners(params?: { page?: number; page_size?: number; search?: string; month?: number; year?: number; group_id?: number | string; status?: 'all' | 'not_started' | 'learning' | 'completed' }): Promise<ReportPaginatedResponse<ReportLearnerStatus>> {
+export async function getReportLearners(params?: { page?: number; page_size?: number; search?: string; month?: number; year?: number; group_id?: number | string; subgroup_id?: number | string; status?: 'all' | 'not_started' | 'learning' | 'completed' }): Promise<ReportPaginatedResponse<ReportLearnerStatus>> {
   const { data } = await apiClient.get<ReportPaginatedResponse<ReportLearnerStatus>>(`${BASE}/report-uncompleted-learners/`, { params });
   return data;
 }

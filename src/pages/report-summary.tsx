@@ -7,7 +7,7 @@ import {
   getReportTopCourses,
   getReportLearners,
 } from '@/api/landa-admin';
-import { getOrgGroups } from '@/api/landa-groups';
+import { getOrgGroups, getSubGroups } from '@/api/landa-groups';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -67,20 +67,27 @@ function ChartTrendModal({
   title,
   isOpen,
   onClose,
-  groupId
+  groupId,
+  subgroupId
 }: {
   metricKey: string | null;
   title: string;
   isOpen: boolean;
   onClose: () => void;
   groupId: number | 'all';
+  subgroupId: number | 'all';
 }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['report-chart', year, metricKey, groupId],
-    queryFn: () => getReportChart(year, metricKey!, groupId === 'all' ? undefined : groupId, false, false),
+    queryKey: ['report-chart', year, metricKey, groupId, subgroupId],
+    queryFn: () => getReportChart(
+      year, metricKey!,
+      groupId === 'all' ? undefined : groupId,
+      false, false,
+      subgroupId === 'all' ? undefined : subgroupId
+    ),
     enabled: !!metricKey && isOpen,
   });
 
@@ -167,11 +174,15 @@ function ChartTrendModal({
   );
 }
 
-function TopCoursesWidget({ month, year, groupId }: { month: number, year: number, groupId: number | 'all' }) {
+function TopCoursesWidget({ month, year, groupId, subgroupId }: { month: number, year: number, groupId: number | 'all', subgroupId: number | 'all' }) {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({
-    queryKey: ['report-top-courses', month, year, page, groupId],
-    queryFn: () => getReportTopCourses({ month, year, page, page_size: 5, group_id: groupId === 'all' ? undefined : groupId }),
+    queryKey: ['report-top-courses', month, year, page, groupId, subgroupId],
+    queryFn: () => getReportTopCourses({
+      month, year, page, page_size: 5,
+      group_id: groupId === 'all' ? undefined : groupId,
+      subgroup_id: subgroupId === 'all' ? undefined : subgroupId
+    }),
   });
 
   return (
@@ -262,17 +273,21 @@ const GROUP_BAR_COLORS = [
 function GroupEnrollmentsWidget({
   year,
   selectedGroupId,
+  selectedSubGroupId,
 }: {
   year: number;
   selectedGroupId: number | 'all';
+  selectedSubGroupId: number | 'all';
 }) {
   const { data, isLoading } = useQuery({
-    queryKey: ['group-enrollments-trend', year, selectedGroupId],
+    queryKey: ['group-enrollments-trend', year, selectedGroupId, selectedSubGroupId],
     queryFn: () => getReportChart(
       year,
       'total_enrollments',
       selectedGroupId === 'all' ? undefined : selectedGroupId,
-      selectedGroupId === 'all'
+      selectedGroupId === 'all',
+      undefined,
+      selectedSubGroupId === 'all' ? undefined : selectedSubGroupId
     ),
   });
 
@@ -296,7 +311,11 @@ function GroupEnrollmentsWidget({
           <div className="space-y-1">
             <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-indigo-500" />
-              Tổng lượt đăng ký theo Group
+              {selectedSubGroupId !== 'all'
+                ? 'Tổng lượt đăng ký theo Team'
+                : selectedGroupId !== 'all'
+                  ? 'Tổng lượt đăng ký theo SubGroup'
+                  : 'Tổng lượt đăng ký theo Group'}
             </CardTitle>
             <p className="text-[11px] text-muted-foreground">
               Xu hướng đăng ký theo tháng — Năm {year}
@@ -380,7 +399,7 @@ function GroupEnrollmentsWidget({
   );
 }
 
-function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: number, year: number, onSelectLearner: (u: string) => void, groupId: number | 'all' }) {
+function UncompletedWidget({ month, year, onSelectLearner, groupId, subgroupId }: { month: number, year: number, onSelectLearner: (u: string) => void, groupId: number | 'all', subgroupId: number | 'all' }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -392,11 +411,12 @@ function UncompletedWidget({ month, year, onSelectLearner, groupId }: { month: n
   }, [search]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['report-learners', month, year, page, debouncedSearch, groupId, statusFilter],
+    queryKey: ['report-learners', month, year, page, debouncedSearch, groupId, subgroupId, statusFilter],
     queryFn: () => getReportLearners({ 
       month, year, page, page_size: 5, 
       search: debouncedSearch, 
       group_id: groupId === 'all' ? undefined : groupId,
+      subgroup_id: subgroupId === 'all' ? undefined : subgroupId,
       status: statusFilter 
     }),
   });
@@ -549,6 +569,7 @@ export default function ReportSummaryPage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedGroupId, setSelectedGroupId] = useState<number | 'all'>('all');
+  const [selectedSubGroupId, setSelectedSubGroupId] = useState<number | 'all'>('all');
   const [isExporting, setIsExporting] = useState(false);
 
   const user = useAuthStore((s) => s.user);
@@ -564,6 +585,13 @@ export default function ReportSummaryPage() {
     queryKey: ['admin-groups-list'],
     queryFn: () => getOrgGroups({ page_size: 100 }),
     enabled: isSuperadmin || isStaff,
+  });
+
+  // Fetch subgroups when a group is selected
+  const { data: subGroupsData } = useQuery({
+    queryKey: ['admin-subgroups-list', selectedGroupId],
+    queryFn: () => getSubGroups(selectedGroupId as number),
+    enabled: (isSuperadmin || isStaff) && selectedGroupId !== 'all',
   });
 
   // learner_plus groups data giả lập từ auth store
@@ -582,8 +610,13 @@ export default function ReportSummaryPage() {
   }, [isLearnerPlus, selectedGroupId, learnerPlusGroupId]);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['report-summary', selectedMonth, selectedYear, selectedGroupId],
-    queryFn: () => getReportSummary({ month: selectedMonth, year: selectedYear, group_id: selectedGroupId === 'all' ? undefined : selectedGroupId }),
+    queryKey: ['report-summary', selectedMonth, selectedYear, selectedGroupId, selectedSubGroupId],
+    queryFn: () => getReportSummary({
+      month: selectedMonth,
+      year: selectedYear,
+      group_id: selectedGroupId === 'all' ? undefined : selectedGroupId,
+      subgroup_id: selectedSubGroupId === 'all' ? undefined : selectedSubGroupId
+    }),
     enabled: canViewReport && (isSuperadmin || isStaff || selectedGroupId !== 'all'),
   });
 
@@ -591,8 +624,13 @@ export default function ReportSummaryPage() {
   const prevMonthYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
 
   const { data: prevData } = useQuery({
-    queryKey: ['report-summary', prevMonth, prevMonthYear, selectedGroupId],
-    queryFn: () => getReportSummary({ month: prevMonth, year: prevMonthYear, group_id: selectedGroupId === 'all' ? undefined : selectedGroupId }),
+    queryKey: ['report-summary', prevMonth, prevMonthYear, selectedGroupId, selectedSubGroupId],
+    queryFn: () => getReportSummary({
+      month: prevMonth,
+      year: prevMonthYear,
+      group_id: selectedGroupId === 'all' ? undefined : selectedGroupId,
+      subgroup_id: selectedSubGroupId === 'all' ? undefined : selectedSubGroupId
+    }),
     enabled: canViewReport && (isSuperadmin || isStaff || selectedGroupId !== 'all'),
   });
 
@@ -720,6 +758,7 @@ export default function ReportSummaryPage() {
         isOpen={!!chartMetric}
         onClose={() => setChartMetric(null)}
         groupId={selectedGroupId}
+        subgroupId={selectedSubGroupId}
       />
 
       {/* Background Decor */}
@@ -749,7 +788,7 @@ export default function ReportSummaryPage() {
               {/* Superadmin / Staff: hiện 'Tất cả' + all groups */}
               {(isSuperadmin || isStaff) && (
                 <DropdownMenuItem
-                  onClick={() => setSelectedGroupId('all')}
+                  onClick={() => { setSelectedGroupId('all'); setSelectedSubGroupId('all'); }}
                   className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedGroupId === 'all' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
                 >
                   Tất cả các doanh nghiệp
@@ -760,7 +799,7 @@ export default function ReportSummaryPage() {
               {(isSuperadmin || isStaff) && groupsData?.groups.map(g => (
                 <DropdownMenuItem
                   key={g.id}
-                  onClick={() => setSelectedGroupId(g.id)}
+                  onClick={() => { setSelectedGroupId(g.id); setSelectedSubGroupId('all'); }}
                   className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedGroupId === g.id ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
                 >
                   <span className="truncate">{g.name}</span>
@@ -780,6 +819,40 @@ export default function ReportSummaryPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* SubGroup Filter — chỉ hiện khi đã chọn Group */}
+          {selectedGroupId !== 'all' && (isSuperadmin || isStaff) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-2 h-9 pl-3 pr-2 py-0 text-xs font-medium rounded-full border border-border bg-background hover:bg-muted outline-none focus-visible:ring-1 focus-visible:ring-primary transition-all text-foreground shadow-sm max-w-full sm:max-w-none">
+                <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="truncate max-w-[100px] sm:max-w-[120px]">
+                  {selectedSubGroupId === 'all'
+                    ? 'Tất cả SubGroup'
+                    : subGroupsData?.subgroups.find(sg => sg.id === selectedSubGroupId)?.name || 'Đang tải...'}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ml-1 shrink-0" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto rounded-lg custom-scrollbar">
+                <DropdownMenuItem
+                  onClick={() => setSelectedSubGroupId('all')}
+                  className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedSubGroupId === 'all' ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Tất cả SubGroup
+                  <div className={`w-1.5 h-1.5 rounded-full transition-colors ${selectedSubGroupId === 'all' ? 'bg-foreground' : 'bg-transparent'}`} />
+                </DropdownMenuItem>
+                {subGroupsData?.subgroups.map(sg => (
+                  <DropdownMenuItem
+                    key={sg.id}
+                    onClick={() => setSelectedSubGroupId(sg.id)}
+                    className={`cursor-pointer text-[13px] mx-1 rounded-md mb-0.5 justify-between transition-colors ${selectedSubGroupId === sg.id ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'}`}
+                  >
+                    <span className="truncate">{sg.name}</span>
+                    <div className={`w-1.5 h-1.5 rounded-full transition-colors ${selectedSubGroupId === sg.id ? 'bg-foreground' : 'bg-transparent'}`} />
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 h-9 pl-3 pr-2 py-0 text-xs font-medium rounded-full border border-border bg-background hover:bg-muted outline-none focus-visible:ring-1 focus-visible:ring-primary transition-all text-foreground shadow-sm shrink-0">
@@ -890,7 +963,7 @@ export default function ReportSummaryPage() {
         }}
       >
         <motion.div variants={cardVariant}>
-          <TopCoursesWidget month={selectedMonth} year={selectedYear} groupId={selectedGroupId} />
+          <TopCoursesWidget month={selectedMonth} year={selectedYear} groupId={selectedGroupId} subgroupId={selectedSubGroupId} />
         </motion.div>
 
         {groupsData && groupsData.groups.length > 0 && (
@@ -898,6 +971,7 @@ export default function ReportSummaryPage() {
             <GroupEnrollmentsWidget
               year={selectedYear}
               selectedGroupId={selectedGroupId}
+              selectedSubGroupId={selectedSubGroupId}
             />
           </motion.div>
         )}
@@ -907,6 +981,7 @@ export default function ReportSummaryPage() {
             month={selectedMonth}
             year={selectedYear}
             groupId={selectedGroupId}
+            subgroupId={selectedSubGroupId}
             onSelectLearner={setSelectedLearner}
           />
         </motion.div>

@@ -22,9 +22,7 @@ export interface SubGroup {
   id: number;
   name: string;
   org_group_id: number;
-  member_count: number;
-  course_count: number;
-  course_category_count: number;
+  team_count: number;
   created_at: string;
 }
 
@@ -55,10 +53,31 @@ export interface AssignedCourseCategory {
   assigned_at: string;
 }
 
-export interface SubGroupDetail extends SubGroup {
+export interface SubGroupDetail {
+  id: number;
+  name: string;
+  org_group_id: number;
+  org_group_name: string;
+  team_count: number;
+  teams: Team[];
+  created_at: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  subgroup_id: number;
+  member_count: number;
+  course_count: number;
+  course_category_count: number;
+  created_at: string;
+}
+
+export interface TeamDetail extends Team {
+  subgroup_name: string;
+  org_group_id: number;
   org_group_name: string;
   category_count: number;
-  course_category_count: number;
   members: SubGroupMember[];
   courses: AssignedCourse[];
   categories: AssignedCategory[];
@@ -86,6 +105,11 @@ interface GroupListResponse {
 
 interface SubGroupListResponse {
   subgroups: SubGroup[];
+  total: number;
+}
+
+interface TeamListResponse {
+  teams: Team[];
   total: number;
 }
 
@@ -157,7 +181,115 @@ export async function deleteSubGroup(id: number): Promise<{ success: boolean }> 
   return data;
 }
 
-// ── Members API ──
+// ── Team API ──
+
+export async function getTeams(
+  subgroupId: number,
+  params?: { search?: string },
+): Promise<TeamListResponse> {
+  const { data } = await apiClient.get(`${BASE}/admin/subgroups/${subgroupId}/teams/`, { params });
+  return data;
+}
+
+export async function createTeam(
+  subgroupId: number,
+  payload: { name: string },
+): Promise<{ id: number; name: string }> {
+  const { data } = await apiClient.post(`${BASE}/admin/subgroups/${subgroupId}/teams/`, payload);
+  return data;
+}
+
+export async function getTeamDetail(id: number): Promise<TeamDetail> {
+  const { data } = await apiClient.get(`${BASE}/admin/teams/${id}/`);
+  return data;
+}
+
+export async function updateTeam(
+  id: number,
+  payload: { name: string },
+): Promise<{ success: boolean }> {
+  const { data } = await apiClient.patch(`${BASE}/admin/teams/${id}/`, payload);
+  return data;
+}
+
+export async function deleteTeam(id: number): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/admin/teams/${id}/`);
+  return data;
+}
+
+// ── Team Members API ──
+
+export async function addTeamMembers(
+  teamId: number,
+  userIds: number[],
+): Promise<{ success: boolean; added: number; skipped: number }> {
+  const { data } = await apiClient.post(`${BASE}/admin/teams/${teamId}/members/`, { user_ids: userIds });
+  return data;
+}
+
+export async function removeTeamMember(
+  teamId: number,
+  userId: number,
+): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/admin/teams/${teamId}/members/${userId}/`);
+  return data;
+}
+
+// ── Team Course Assignment API ──
+
+export async function assignTeamCourses(
+  teamId: number,
+  courseIds: string[],
+): Promise<{ success: boolean; assigned: number; skipped: number }> {
+  const { data } = await apiClient.post(`${BASE}/admin/teams/${teamId}/courses/`, { course_ids: courseIds });
+  return data;
+}
+
+export async function revokeTeamCourse(
+  teamId: number,
+  courseId: string,
+): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/admin/teams/${teamId}/courses/${encodeURIComponent(courseId)}/`);
+  return data;
+}
+
+// ── Team Category Assignment API ──
+
+export async function assignTeamCategories(
+  teamId: number,
+  categoryIds: number[],
+): Promise<{ success: boolean; assigned: number; skipped: number }> {
+  const { data } = await apiClient.post(`${BASE}/admin/teams/${teamId}/categories/`, { category_ids: categoryIds });
+  return data;
+}
+
+export async function revokeTeamCategory(
+  teamId: number,
+  categoryId: number,
+): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/admin/teams/${teamId}/categories/${categoryId}/`);
+  return data;
+}
+
+// ── Team Course Category Assignment API ──
+
+export async function assignTeamCourseCategories(
+  teamId: number,
+  categoryIds: number[],
+): Promise<{ success: boolean; assigned: number; skipped: number }> {
+  const { data } = await apiClient.post(`${BASE}/admin/teams/${teamId}/course-categories/`, { category_ids: categoryIds });
+  return data;
+}
+
+export async function revokeTeamCourseCategory(
+  teamId: number,
+  categoryId: number,
+): Promise<{ success: boolean }> {
+  const { data } = await apiClient.delete(`${BASE}/admin/teams/${teamId}/course-categories/${categoryId}/`);
+  return data;
+}
+
+// ── Legacy SubGroup Members API (kept for migration period) ──
 
 export async function addMembers(
   sgId: number,
@@ -175,8 +307,6 @@ export async function removeMember(
   return data;
 }
 
-// ── Course Assignment API ──
-
 export async function assignCourses(
   sgId: number,
   courseIds: string[],
@@ -193,8 +323,6 @@ export async function revokeCourse(
   return data;
 }
 
-// ── Category Assignment API ──
-
 export async function assignCategories(
   sgId: number,
   categoryIds: number[],
@@ -210,8 +338,6 @@ export async function revokeCategory(
   const { data } = await apiClient.delete(`${BASE}/admin/subgroups/${sgId}/categories/${categoryId}/`);
   return data;
 }
-
-// ── Course Category Assignment API ──
 
 export async function assignCourseCategories(
   sgId: number,

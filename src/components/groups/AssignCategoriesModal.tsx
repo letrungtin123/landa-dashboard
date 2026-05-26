@@ -8,17 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDebounce } from '@/hooks/use-debounce';
 import { getCategories } from '@/api/landa-admin';
-import { assignCategories } from '@/api/landa-groups';
+import { assignCategories, assignTeamCategories } from '@/api/landa-groups';
 
 interface Props {
   open: boolean;
   sgId: number;
+  teamId?: number;
   assignedCategoryIds: number[];
   onOpenChange: (v: boolean) => void;
   onSuccess: () => void;
 }
 
-export function AssignCategoriesModal({ open, sgId, assignedCategoryIds, onOpenChange, onSuccess }: Props) {
+export function AssignCategoriesModal({ open, sgId, teamId, assignedCategoryIds, onOpenChange, onSuccess }: Props) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<number[]>([]);
   const [page, setPage] = useState(1);
@@ -34,7 +35,7 @@ export function AssignCategoriesModal({ open, sgId, assignedCategoryIds, onOpenC
   });
 
   const mutation = useMutation({
-    mutationFn: () => assignCategories(sgId, selected),
+    mutationFn: () => teamId ? assignTeamCategories(teamId, selected) : assignCategories(sgId, selected),
     onSuccess: (res) => {
       toast.success(`Đã phân ${res.assigned} danh mục${res.skipped ? ` (${res.skipped} đã có)` : ''}`);
       setSelected([]);

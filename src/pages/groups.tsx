@@ -1,21 +1,29 @@
 // ============================================================
 // groups.tsx — Group Management Page (Staff/Superuser only)
-// Layout: 3-panel (OrgGroup | SubGroup | Detail)
+// Layout: 4-panel (OrgGroup | SubGroup | Team | Detail)
 // ============================================================
 
 import { useState } from 'react';
-import { FolderTree, Users, MousePointerClick } from 'lucide-react';
+import { FolderTree, Users, MousePointerClick, UsersRound } from 'lucide-react';
 import { OrgGroupPanel } from '@/components/groups/OrgGroupPanel';
 import { SubGroupPanel } from '@/components/groups/SubGroupPanel';
-import { SubGroupDetailPanel } from '@/components/groups/SubGroupDetailPanel';
+import { TeamPanel } from '@/components/groups/TeamPanel';
+import { TeamDetailPanel } from '@/components/groups/TeamDetailPanel';
 
 export default function GroupsPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<number>(0);
   const [selectedSubGroupId, setSelectedSubGroupId] = useState<number>(0);
+  const [selectedTeamId, setSelectedTeamId] = useState<number>(0);
 
   const handleSelectGroup = (id: number) => {
     setSelectedGroupId(id);
     setSelectedSubGroupId(0); // reset subgroup khi đổi group cha
+    setSelectedTeamId(0);
+  };
+
+  const handleSelectSubGroup = (id: number) => {
+    setSelectedSubGroupId(id);
+    setSelectedTeamId(0); // reset team khi đổi subgroup
   };
 
   return (
@@ -33,10 +41,10 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      {/* 3-Panel Layout */}
+      {/* 4-Panel Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Panel 1 — Org Groups (fixed width) */}
-        <div className="w-56 shrink-0 flex flex-col overflow-hidden">
+        <div className="w-52 shrink-0 flex flex-col overflow-hidden">
           <OrgGroupPanel
             selectedId={selectedGroupId}
             onSelect={handleSelectGroup}
@@ -44,26 +52,39 @@ export default function GroupsPage() {
         </div>
 
         {/* Panel 2 — Sub Groups (fixed width, chỉ hiện khi có group cha) */}
-        <div className="w-56 shrink-0 flex flex-col overflow-hidden">
+        <div className="w-52 shrink-0 flex flex-col overflow-hidden">
           {selectedGroupId > 0 ? (
             <SubGroupPanel
               groupId={selectedGroupId}
               selectedId={selectedSubGroupId}
-              onSelect={setSelectedSubGroupId}
+              onSelect={handleSelectSubGroup}
             />
           ) : (
             <EmptyHint icon={<Users className="h-8 w-8" />} text="Chọn một tổ chức" />
           )}
         </div>
 
-        {/* Panel 3 — Detail (flex-1) */}
-        <div className="flex-1 overflow-hidden">
+        {/* Panel 3 — Teams (fixed width, chỉ hiện khi có subgroup) */}
+        <div className="w-52 shrink-0 flex flex-col overflow-hidden">
           {selectedSubGroupId > 0 ? (
-            <SubGroupDetailPanel sgId={selectedSubGroupId} />
+            <TeamPanel
+              subgroupId={selectedSubGroupId}
+              selectedId={selectedTeamId}
+              onSelect={setSelectedTeamId}
+            />
+          ) : (
+            <EmptyHint icon={<UsersRound className="h-8 w-8" />} text={selectedGroupId > 0 ? 'Chọn một phòng ban' : ''} />
+          )}
+        </div>
+
+        {/* Panel 4 — Detail (flex-1) */}
+        <div className="flex-1 overflow-hidden">
+          {selectedTeamId > 0 ? (
+            <TeamDetailPanel teamId={selectedTeamId} />
           ) : (
             <EmptyHint
               icon={<MousePointerClick className="h-8 w-8" />}
-              text={selectedGroupId > 0 ? 'Chọn một phòng ban để xem chi tiết' : 'Chọn tổ chức rồi chọn phòng ban'}
+              text={selectedSubGroupId > 0 ? 'Chọn một team để xem chi tiết' : selectedGroupId > 0 ? 'Chọn phòng ban rồi chọn team' : 'Chọn tổ chức → phòng ban → team'}
             />
           )}
         </div>

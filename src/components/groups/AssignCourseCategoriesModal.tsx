@@ -7,17 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getCourseCategories } from '@/api/landa-admin';
-import { assignCourseCategories } from '@/api/landa-groups';
+import { assignCourseCategories, assignTeamCourseCategories } from '@/api/landa-groups';
 
 interface Props {
   open: boolean;
   sgId: number;
+  teamId?: number;
   assignedCategoryIds: number[];
   onOpenChange: (v: boolean) => void;
   onSuccess: () => void;
 }
 
-export function AssignCourseCategoriesModal({ open, sgId, assignedCategoryIds, onOpenChange, onSuccess }: Props) {
+export function AssignCourseCategoriesModal({ open, sgId, teamId, assignedCategoryIds, onOpenChange, onSuccess }: Props) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<number[]>([]);
 
@@ -29,7 +30,7 @@ export function AssignCourseCategoriesModal({ open, sgId, assignedCategoryIds, o
   });
 
   const mutation = useMutation({
-    mutationFn: () => assignCourseCategories(sgId, selected),
+    mutationFn: () => teamId ? assignTeamCourseCategories(teamId, selected) : assignCourseCategories(sgId, selected),
     onSuccess: (res) => {
       toast.success(`Đã phân ${res.assigned} danh mục khóa học${res.skipped ? ` (${res.skipped} đã có)` : ''}`);
       setSelected([]);

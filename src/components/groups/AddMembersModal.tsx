@@ -10,17 +10,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useQuery } from '@tanstack/react-query';
 import { getAdminUsers, type LandaUser } from '@/api/landa-admin';
-import { addMembers } from '@/api/landa-groups';
+import { addMembers, addTeamMembers } from '@/api/landa-groups';
 
 interface Props {
   open: boolean;
   sgId: number;
+  teamId?: number;
   existingMemberIds: number[];
   onOpenChange: (v: boolean) => void;
   onSuccess: () => void;
 }
 
-export function AddMembersModal({ open, sgId, existingMemberIds, onOpenChange, onSuccess }: Props) {
+export function AddMembersModal({ open, sgId, teamId, existingMemberIds, onOpenChange, onSuccess }: Props) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<number[]>([]);
   const [page, setPage] = useState(1);
@@ -36,7 +37,7 @@ export function AddMembersModal({ open, sgId, existingMemberIds, onOpenChange, o
   });
 
   const mutation = useMutation({
-    mutationFn: () => addMembers(sgId, selected),
+    mutationFn: () => teamId ? addTeamMembers(teamId, selected) : addMembers(sgId, selected),
     onSuccess: (res) => {
       toast.success(`Đã thêm ${res.added} thành viên${res.skipped ? ` (${res.skipped} đã có)` : ''}`);
       setSelected([]);
