@@ -84,12 +84,12 @@ export default function CoursesPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      
+
       // 1. Upload to Assets API
       const { data } = await apiClient.post(`/cms-api/landa-admin/api/authoring/assets/${courseId}/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       const display_name = data?.asset?.display_name || data?.display_name || file.name;
       if (!display_name) throw new Error("Không nhận được tên file từ server");
 
@@ -98,7 +98,7 @@ export default function CoursesPage() {
       await apiClient.post(`/cms-api/landa-admin/api/authoring/xblock/${usageKey}`, {
         metadata: { course_image: display_name }
       });
-      
+
       toast.success('Đã cập nhật ảnh đại diện khóa học!');
       queryClient.invalidateQueries({ queryKey: ['landa-courses'] });
     } catch (err: any) {
@@ -112,7 +112,7 @@ export default function CoursesPage() {
     const file = e.target.files?.[0];
     const courseId = fileInputRef.current?.getAttribute('data-course-id');
     if (!file || !courseId) return;
-    
+
     handleUploadCourseImage(courseId, file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -210,52 +210,53 @@ export default function CoursesPage() {
 
       {/* Dialog Preview Card */}
       <Dialog open={!!previewCourse} onOpenChange={(o) => !o && setPreviewCourse(null)}>
-        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-border bg-background gap-0 rounded-2xl">
-          <div className="relative h-48 bg-[#3b82f6] flex items-center justify-center">
-            {previewCourse?.image_url && !previewCourse.image_url.includes('images/course_image') && !previewCourse.image_url.includes('images_course_image') ? (
-              <img src={previewCourse.image_url} alt="course" className="w-full h-full object-cover" />
-            ) : (
-              <BookOpen className="w-20 h-20 text-white/50" strokeWidth={1.5} />
-            )}
+        <DialogContent className="sm:max-w-[380px] p-5 border-border bg-background gap-0">
+          <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[13px] font-medium leading-[18px]">
+            💡 Phần này chỉ có chức năng xem trước giao diện tĩnh của card khóa học ở phía người học và không thể click tương tác
           </div>
-          <div className="p-6 space-y-5">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 font-medium px-2.5 py-0.5 rounded-full text-xs">Đang học</Badge>
-              <Badge variant="outline" className="font-medium text-foreground bg-background rounded-full px-2.5 py-0.5 text-xs shadow-sm">Có hướng dẫn</Badge>
+
+          <div className="w-full rounded-[28px] border border-border bg-card p-2 pb-4 shadow-sm">
+            {/* Ảnh bìa khóa học */}
+            <div className="flex h-44 items-center justify-center relative overflow-hidden shrink-0 rounded-[20px] bg-muted">
+              {previewCourse?.image_url && !previewCourse.image_url.includes('images/course_image') && !previewCourse.image_url.includes('images_course_image') ? (
+                <img
+                  src={previewCourse.image_url}
+                  alt={previewCourse.display_name}
+                  className="absolute inset-0 z-10 h-full w-full object-cover rounded-[20px]"
+                />
+              ) : (
+                <BookOpen className="h-12 w-12 text-muted-foreground/40" />
+              )}
             </div>
-            
-            <div className="space-y-1">
-              <h3 className="text-[22px] font-bold text-[#1a66ff] dark:text-[#3b82f6] leading-snug">
+
+            <div className="pt-4 px-2 flex flex-col flex-1">
+              {/* Organization label nhỏ màu xanh */}
+              <p className="mb-1.5 text-[13px] font-medium leading-[16px] text-primary">
+                {previewCourse?.org || "LAndA"}
+              </p>
+
+              <h3 className="mb-5 text-[20px] font-bold leading-[26px] text-foreground line-clamp-2">
                 {previewCourse?.display_name || "L&A System 4"}
               </h3>
-              <p className="text-sm text-muted-foreground">{previewCourse?.org || "LAndA"}</p>
-            </div>
 
-            <div className="pt-3">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-muted-foreground">Tiến độ</span>
-                <span className="text-sm font-bold text-[#1a66ff] dark:text-[#3b82f6]">50%</span>
+              <div className="mt-auto pt-5">
+                <button
+                  className="w-fit rounded-full bg-primary px-8 py-3 text-[15px] font-bold leading-[18px] text-white transition-colors hover:bg-primary/90"
+                >
+                  Bắt đầu học
+                </button>
               </div>
-              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-[#1a66ff] dark:bg-[#3b82f6] rounded-full" style={{ width: '50%' }} />
-              </div>
-            </div>
-
-            <div className="pt-1">
-              <Button variant="link" className="px-0 text-[#1a66ff] dark:text-[#3b82f6] font-semibold gap-1.5 h-auto text-[15px] hover:no-underline hover:opacity-80">
-                Tiếp tục học <ArrowRight className="w-4 h-4" />
-              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      <input 
-        type="file" 
-        accept="image/*" 
-        className="hidden" 
-        ref={fileInputRef} 
-        onChange={onFileChange} 
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={onFileChange}
       />
 
       <TableToolbar
@@ -299,175 +300,175 @@ export default function CoursesPage() {
       <TooltipProvider delayDuration={300}>
         <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/10">
-              <TableRow className="hover:bg-transparent border-border">
-                <TableHead className="w-10 pl-4">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-                </TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Khóa học</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Tổ chức</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Trạng thái</TableHead>
+            <Table>
+              <TableHeader className="bg-muted/10">
+                <TableRow className="hover:bg-transparent border-border">
+                  <TableHead className="w-10 pl-4">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+                  </TableHead>
+                  <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Khóa học</TableHead>
+                  <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Tổ chức</TableHead>
+                  <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Trạng thái</TableHead>
 
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Kết thúc</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Cập nhật</TableHead>
-                <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider text-right pr-5">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className={isFetching && courses.length > 0 ? 'opacity-50 pointer-events-none' : ''}>
-              {isLoading ? (
-                Array.from({ length: limit }).map((_, i) => (
-                  <TableRow key={i} className="border-border">
-                    <TableCell className="pl-4"><Skeleton className="h-4 w-4" /></TableCell>
-                    <TableCell><div className="space-y-1"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-52" /></div></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : courses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center">
-                    <div className="flex flex-col items-center text-muted-foreground">
-                      <GraduationCap className="w-8 h-8 mb-2 opacity-20" />
-                      <p className="text-sm">Chưa có khóa học</p>
-                    </div>
-                  </TableCell>
+                  <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Kết thúc</TableHead>
+                  <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Cập nhật</TableHead>
+                  <TableHead className="font-medium text-xs text-muted-foreground uppercase tracking-wider text-right pr-5">Thao tác</TableHead>
                 </TableRow>
-              ) : (
-                courses.map((course) => (
-                  <TableRow key={course.id} className="group hover:bg-muted/30 transition-colors border-border">
-                    <TableCell className="pl-4">
-                      <Checkbox checked={selected.includes(course.id)} onCheckedChange={() => toggleOne(course.id)} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2.5">
-                        <BookOpen className="h-4 w-4 text-primary/60 flex-shrink-0" />
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-medium text-sm truncate max-w-[280px]">{course.display_name}</span>
-                          <span className="text-[11px] text-muted-foreground font-mono truncate max-w-[280px]">{course.id}</span>
-                        </div>
+              </TableHeader>
+              <TableBody className={isFetching && courses.length > 0 ? 'opacity-50 pointer-events-none' : ''}>
+                {isLoading ? (
+                  Array.from({ length: limit }).map((_, i) => (
+                    <TableRow key={i} className="border-border">
+                      <TableCell className="pl-4"><Skeleton className="h-4 w-4" /></TableCell>
+                      <TableCell><div className="space-y-1"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-52" /></div></TableCell>
+                      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : courses.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-32 text-center">
+                      <div className="flex flex-col items-center text-muted-foreground">
+                        <GraduationCap className="w-8 h-8 mb-2 opacity-20" />
+                        <p className="text-sm">Chưa có khóa học</p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <span className="text-xs font-mono font-medium bg-secondary px-2 py-0.5 rounded border border-border">{course.org}</span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={course.visible_to_staff_only
-                          ? 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700/50'
-                          : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
-                        }
-                      >
-                        {course.visible_to_staff_only ? 'Đã lưu trữ' : 'Đang hoạt động'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{course.end}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{course.modified || '—'}</TableCell>
-                    <TableCell className="text-right pr-5 flex justify-end gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon"
-                            onClick={() => setPreviewCourse(course)}
-                            className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/30"
-                          >
-                            <LayoutTemplate className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Xem thẻ xem trước</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon"
-                            onClick={() => triggerUpload(course.id)}
-                            disabled={uploadingCourseId === course.id}
-                            className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
-                          >
-                            {uploadingCourseId === course.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Đổi ảnh đại diện</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon"
-                            onClick={() => setSelectedCourseFiles(course.id)}
-                            className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/30"
-                          >
-                            <FolderOpen className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Quản lý tệp tin</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon"
-                            onClick={() => toggleVis.mutate({ id: course.id, visible: !course.visible_to_staff_only })}
-                            className={`h-8 w-8 ${course.visible_to_staff_only ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-500 dark:hover:bg-amber-950/30' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/50'}`}
-                          >
-                            {course.visible_to_staff_only ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{course.visible_to_staff_only ? 'Khôi phục hiển thị' : 'Lưu trữ khóa học'}</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon"
-                            onClick={() => setNotifyCourseId(course.id)}
-                            className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                          >
-                            <Bell className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Gửi thông báo</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon"
-                            onClick={() => setModalConfigCourseId(course.id)}
-                            className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/30"
-                          >
-                            <Settings2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Cấu hình hộp thoại</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Link to={`/courses/${course.id}/edit`}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10">
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent>Chỉnh sửa nội dung</TooltipContent>
-                      </Tooltip>
-                    </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : (
+                  courses.map((course) => (
+                    <TableRow key={course.id} className="group hover:bg-muted/30 transition-colors border-border">
+                      <TableCell className="pl-4">
+                        <Checkbox checked={selected.includes(course.id)} onCheckedChange={() => toggleOne(course.id)} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <BookOpen className="h-4 w-4 text-primary/60 flex-shrink-0" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium text-sm truncate max-w-[280px]">{course.display_name}</span>
+                            <span className="text-[11px] text-muted-foreground font-mono truncate max-w-[280px]">{course.id}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs font-mono font-medium bg-secondary px-2 py-0.5 rounded border border-border">{course.org}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={course.visible_to_staff_only
+                            ? 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700/50'
+                            : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                          }
+                        >
+                          {course.visible_to_staff_only ? 'Đã lưu trữ' : 'Đang hoạt động'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{course.end}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{course.modified || '—'}</TableCell>
+                      <TableCell className="text-right pr-5 flex justify-end gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon"
+                              onClick={() => setPreviewCourse(course)}
+                              className="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/30"
+                            >
+                              <LayoutTemplate className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Xem thẻ xem trước</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon"
+                              onClick={() => triggerUpload(course.id)}
+                              disabled={uploadingCourseId === course.id}
+                              className="h-8 w-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
+                            >
+                              {uploadingCourseId === course.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Đổi ảnh đại diện</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon"
+                              onClick={() => setSelectedCourseFiles(course.id)}
+                              className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950/30"
+                            >
+                              <FolderOpen className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Quản lý tệp tin</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon"
+                              onClick={() => toggleVis.mutate({ id: course.id, visible: !course.visible_to_staff_only })}
+                              className={`h-8 w-8 ${course.visible_to_staff_only ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-500 dark:hover:bg-amber-950/30' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/50'}`}
+                            >
+                              {course.visible_to_staff_only ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{course.visible_to_staff_only ? 'Khôi phục hiển thị' : 'Lưu trữ khóa học'}</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon"
+                              onClick={() => setNotifyCourseId(course.id)}
+                              className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                            >
+                              <Bell className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Gửi thông báo</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon"
+                              onClick={() => setModalConfigCourseId(course.id)}
+                              className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/30"
+                            >
+                              <Settings2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Cấu hình hộp thoại</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link to={`/courses/${course.id}/edit`}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10">
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent>Chỉnh sửa nội dung</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           <Pagination page={page} limit={limit} total={total} totalPages={totalPages} onPageChange={setPage} onLimitChange={setLimit} label="khóa học" />
         </div>
       </TooltipProvider>
 
-      <CourseFilesModal 
-        isOpen={!!selectedCourseFiles} 
-        onClose={() => setSelectedCourseFiles(null)} 
-        courseId={selectedCourseFiles || ''} 
+      <CourseFilesModal
+        isOpen={!!selectedCourseFiles}
+        onClose={() => setSelectedCourseFiles(null)}
+        courseId={selectedCourseFiles || ''}
       />
 
       {/* Dialog cấu hình Modal */}
@@ -654,10 +655,10 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
                                 return <Ban className="w-5 h-5 text-muted-foreground/50" />;
                               })()}
                               <span>
-                                {form.completion_social_type === 'zaloOA' ? 'Zalo OA' : 
-                                 form.completion_social_type === 'facebook' ? 'Facebook' : 
-                                 form.completion_social_type === 'website' ? 'Website' : 
-                                 form.completion_social_type === 'instagram' ? 'Instagram' : 'Không dùng'}
+                                {form.completion_social_type === 'zaloOA' ? 'Zalo OA' :
+                                  form.completion_social_type === 'facebook' ? 'Facebook' :
+                                    form.completion_social_type === 'website' ? 'Website' :
+                                      form.completion_social_type === 'instagram' ? 'Instagram' : 'Không dùng'}
                               </span>
                             </div>
                             <ChevronDown className="h-4 w-4 opacity-50" />
@@ -693,11 +694,11 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs text-muted-foreground">Đường dẫn</label>
-                      <input 
-                        className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm ${!isValidUrl(form.completion_social_link || '') ? 'border-red-500 focus-visible:ring-red-500/30 text-red-600' : 'border-input'}`} 
-                        placeholder="https://..." 
-                        value={form.completion_social_link || ''} 
-                        onChange={e => updateField('completion_social_link', e.target.value)} 
+                      <input
+                        className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm ${!isValidUrl(form.completion_social_link || '') ? 'border-red-500 focus-visible:ring-red-500/30 text-red-600' : 'border-input'}`}
+                        placeholder="https://..."
+                        value={form.completion_social_link || ''}
+                        onChange={e => updateField('completion_social_link', e.target.value)}
                         disabled={!form.completion_social_type}
                       />
                       {!isValidUrl(form.completion_social_link || '') && <p className="text-[10px] text-red-500 mt-1">Đường dẫn không hợp lệ</p>}
@@ -711,12 +712,12 @@ function CourseModalConfigDialog({ courseId, open, onClose }: { courseId: string
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Hủy</Button>
-          <Button 
-            onClick={() => saveMut.mutate()} 
+          <Button
+            onClick={() => saveMut.mutate()}
             disabled={
-              saveMut.isPending || 
-              (form.welcome_enabled && (!form.welcome_title?.trim() || !form.welcome_description?.trim())) || 
-              (form.confirm_enabled && (!form.confirm_title?.trim() || !form.confirm_description?.trim() || !form.confirm_checkbox_text?.trim())) || 
+              saveMut.isPending ||
+              (form.welcome_enabled && (!form.welcome_title?.trim() || !form.welcome_description?.trim())) ||
+              (form.confirm_enabled && (!form.confirm_title?.trim() || !form.confirm_description?.trim() || !form.confirm_checkbox_text?.trim())) ||
               (form.completion_enabled && (!form.completion_title?.trim() || !form.completion_description?.trim())) ||
               (form.completion_enabled && !!form.completion_social_type && !form.completion_social_link?.trim()) ||
               (form.completion_enabled && !isValidUrl(form.completion_social_link || ''))

@@ -10,7 +10,7 @@ const PROBLEM_TYPES = [
     id: 'multiplechoiceresponse',
     label: 'Trắc nghiệm 1 đáp án',
     desc: 'Chọn một đáp án đúng',
-    boilerplate: 'multiplechoice',
+    boilerplate: 'multiplechoice.yaml',
     template: `<problem>
   <multiplechoiceresponse>
     <label>Câu hỏi của bạn</label>
@@ -26,7 +26,7 @@ const PROBLEM_TYPES = [
     id: 'choiceresponse',
     label: 'Trắc nghiệm nhiều đáp án',
     desc: 'Chọn nhiều đáp án đúng',
-    boilerplate: 'choiceresponse',
+    boilerplate: 'checkboxes_response.yaml',
     template: `<problem>
   <choiceresponse>
     <label>Câu hỏi của bạn</label>
@@ -42,7 +42,7 @@ const PROBLEM_TYPES = [
     id: 'optionresponse',
     label: 'Danh sách thả xuống',
     desc: 'Chọn từ danh sách thả xuống',
-    boilerplate: 'dropdown',
+    boilerplate: 'optionresponse.yaml',
     template: `<problem>
   <optionresponse>
     <label>Câu hỏi của bạn</label>
@@ -58,7 +58,7 @@ const PROBLEM_TYPES = [
     id: 'numericalresponse',
     label: 'Điền số',
     desc: 'Nhập số (có sai số)',
-    boilerplate: 'numericalresponse',
+    boilerplate: 'numericalresponse.yaml',
     template: `<problem>
   <numericalresponse answer="100">
     <label>Câu hỏi số học của bạn</label>
@@ -71,7 +71,7 @@ const PROBLEM_TYPES = [
     id: 'stringresponse',
     label: 'Điền văn bản',
     desc: 'Nhập văn bản tự do',
-    boilerplate: 'stringresponse',
+    boilerplate: 'string_response.yaml',
     template: `<problem>
   <stringresponse answer="đáp án đúng" type="ci">
     <label>Câu hỏi của bạn</label>

@@ -369,7 +369,7 @@ function ComponentCard({ block, courseId, onDelete, onSaved }: {
     <div
       ref={setNodeRef}
       style={sortableStyle}
-      className={`border border-border rounded-xl bg-card shadow-sm hover:shadow-md transition-shadow overflow-hidden group ${isDragging ? 'shadow-lg ring-2 ring-primary/20' : ''}`}
+      className={`border border-border rounded-xl bg-card shadow-sm hover:shadow-md transition-shadow group ${isDragging ? 'shadow-lg ring-2 ring-primary/20' : ''}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between bg-muted/30 px-4 py-2.5 border-b border-border">
@@ -824,14 +824,45 @@ function ProblemPreviewDropdown({
   isCorrect: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
   const selectedChoice = choices.find((c: any) => c.html === value);
+
+  // Tính position tuyệt đối (fixed) dựa theo vị trí nút button để thoát khỏi overflow-hidden
+  const openDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+    setIsOpen(!isOpen);
+  };
+
+  // Đóng dropdown khi click ra ngoài
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const close = () => setIsOpen(false);
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [isOpen]);
 
   return (
     <div className="relative w-full">
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
-        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        onClick={openDropdown}
         className={`flex w-full items-center justify-between rounded-xl border-2 px-5 py-4 text-left transition-all ${
           disabled
             ? 'cursor-not-allowed border-border bg-muted/50 opacity-70'
@@ -849,7 +880,11 @@ function ProblemPreviewDropdown({
       </button>
 
       {isOpen && !disabled && (
-        <div className="absolute z-10 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-border bg-background p-2 shadow-lg ring-1 ring-black/5">
+        <div
+          style={dropdownStyle}
+          className="max-h-60 overflow-y-auto rounded-xl border border-border bg-background p-2 shadow-xl ring-1 ring-black/10"
+          onClick={(e) => e.stopPropagation()}
+        >
           {choices.map((c: any) => (
             <button
               key={c.id}
