@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { DiagramXBlockData } from '@/api/course-authoring';
+import { DiagramXBlockData } from '../DiagramEditor';
+
 
 export function useDiagramHistory(
   initialData: DiagramXBlockData,

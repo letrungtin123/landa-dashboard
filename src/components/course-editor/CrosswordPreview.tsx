@@ -33,6 +33,7 @@ export function CrosswordPreviewInteractive({ parsed, showAnswers = false }: { p
   // State cho input của học viên (chỉ dùng khi showAnswers = false)
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [validationMsg, setValidationMsg] = useState('');
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Tạo map: key "row-col" → ký tự đáp án đúng
@@ -110,18 +111,13 @@ export function CrosswordPreviewInteractive({ parsed, showAnswers = false }: { p
 
           if (submitted && !showAnswers) {
             focusStyle = '';
-            const userVal = (inputs[key] || '').toUpperCase();
-            const correctVal = correctMap[key] || '';
-            if (userVal === correctVal) {
+            // Giữ nguyên style keyword khi submitted, không highlight đúng/sai từng ô
+            if (isKeyword) {
+              bgClass = 'bg-primary border-primary';
+              textColorClass = 'text-primary-foreground';
+            } else {
               bgClass = 'bg-primary/10 border-primary';
               textColorClass = 'text-primary';
-              if (isKeyword) {
-                bgClass = 'bg-primary border-primary';
-                textColorClass = 'text-primary-foreground';
-              }
-            } else {
-              bgClass = 'bg-destructive/10 border-destructive/60';
-              textColorClass = 'text-destructive';
             }
           }
 
@@ -214,6 +210,43 @@ export function CrosswordPreviewInteractive({ parsed, showAnswers = false }: { p
         </ul>
       </div>
 
+      {/* Thông báo chưa nhập đủ */}
+      {validationMsg && !submitted && (
+        <div className="flex items-center gap-3 rounded-xl p-4 bg-amber-500/10 border border-amber-500/20">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white shrink-0">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+          </div>
+          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{validationMsg}</p>
+        </div>
+      )}
+
+      {/* Kết quả sau khi nộp bài — chỉ đúng/sai toàn bộ */}
+      {!showAnswers && submitted && (() => {
+        let allCorrect = true;
+        for (const key of validCells) {
+          const userVal = (inputs[key] || '').toUpperCase();
+          const correctVal = correctMap[key] || '';
+          if (userVal !== correctVal) { allCorrect = false; break; }
+        }
+
+        return (
+          <div className={`flex items-center gap-3 rounded-xl p-4 ${allCorrect ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+            {allCorrect ? (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white shrink-0">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </div>
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shrink-0">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </div>
+            )}
+            <p className="text-sm font-bold text-foreground">
+              {allCorrect ? 'Chính xác! 🎉' : 'Chưa đúng, hãy thử lại.'}
+            </p>
+          </div>
+        );
+      })()}
+
       {/* Nút Submit — ẩn khi showAnswers */}
       {!showAnswers && (
         <div className="flex justify-center pt-2">
@@ -224,7 +257,18 @@ export function CrosswordPreviewInteractive({ parsed, showAnswers = false }: { p
               if (submitted) {
                 setSubmitted(false);
                 setInputs({});
+                setValidationMsg('');
               } else {
+                // Validate: kiểm tra đã nhập đủ hết ô chưa
+                let allFilled = true;
+                for (const key of validCells) {
+                  if (!(inputs[key] || '').trim()) { allFilled = false; break; }
+                }
+                if (!allFilled) {
+                  setValidationMsg('Vui lòng nhập hết từ vào ô trống trước khi nộp bài.');
+                  return;
+                }
+                setValidationMsg('');
                 setSubmitted(true);
               }
             }}

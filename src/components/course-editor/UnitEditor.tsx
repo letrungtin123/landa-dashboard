@@ -35,9 +35,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
   Trash2, GripVertical, Plus, Video, Type, HelpCircle,
   Save, Edit2, ChevronDown, Puzzle, List, Check, X, Network, MessageSquareText
 } from 'lucide-react';
@@ -809,7 +806,69 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
   }
 }
 
-// ─── Interactive Problem Preview ────────────────────────────────────────────────
+// ─── Interactive Problem Preview (styled to match FE-5173 QuizContent) ───────
+
+function ProblemPreviewDropdown({
+  choices,
+  value,
+  onChange,
+  disabled,
+  submitted,
+  isCorrect,
+}: {
+  choices: any[];
+  value: string;
+  onChange: (val: string) => void;
+  disabled: boolean;
+  submitted: boolean;
+  isCorrect: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedChoice = choices.find((c: any) => c.html === value);
+
+  return (
+    <div className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        className={`flex w-full items-center justify-between rounded-xl border-2 px-5 py-4 text-left transition-all ${
+          disabled
+            ? 'cursor-not-allowed border-border bg-muted/50 opacity-70'
+            : submitted
+              ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5')
+              : (isOpen || value)
+                ? 'border-primary bg-primary/5 ring-1 ring-primary text-foreground'
+                : 'border-border bg-background hover:bg-muted/20 text-foreground'
+        }`}
+      >
+        <span className={`text-[15px] font-medium leading-relaxed ${value ? 'text-primary' : 'text-muted-foreground'}`}>
+          {selectedChoice ? selectedChoice.html : '-- Chọn đáp án --'}
+        </span>
+        <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180 text-primary' : ''} ${value && !isOpen ? 'text-primary' : ''}`} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="absolute z-10 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-border bg-background p-2 shadow-lg ring-1 ring-black/5">
+          {choices.map((c: any) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(c.html); setIsOpen(false); }}
+              className={`flex w-full cursor-pointer items-center rounded-lg px-4 py-3 text-left transition-colors ${
+                value === c.html
+                  ? 'bg-primary/10 text-primary font-bold'
+                  : 'text-foreground hover:bg-muted/80 font-medium'
+              }`}
+            >
+              <span className="text-[14px]">{c.html}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: number }) {
   const isMulti = parsed.type === 'choiceresponse';
@@ -843,7 +902,6 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
     if (isInput) {
       const correctAnswers = parsed.choices.map((c: any) => c.html);
       if (parsed.type === 'numericalresponse') {
-        // Simple parsing for tolerance/preview, ignoring actual tolerance for now as it can be complex (e.g. 5%)
         isCorrect = correctAnswers.some((ans: string) => Math.abs(parseFloat(ans) - parseFloat(inputValue)) <= 0.0001);
       } else {
         isCorrect = correctAnswers.some((ans: string) => ans.toLowerCase().trim() === inputValue.toLowerCase().trim());
@@ -861,153 +919,208 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
     }
   }
 
+  // Quiz type info text
+  const typeInfoText = isMulti
+    ? 'Được phép chọn nhiều đáp án.'
+    : isDropdown
+      ? 'Chọn đáp án từ danh sách xổ xuống.'
+      : isInput
+        ? 'Nhập đáp án vào ô trống.'
+        : 'Chỉ chọn 1 đáp án.';
+
   return (
-    <div className="space-y-4 max-w-4xl py-1">
-      <div className="text-[13px] text-muted-foreground">
-        {submitted ? `${isCorrect ? weight.toFixed(1) : '0.0'}/${weight.toFixed(1)} point (graded)` : `0.0/${weight.toFixed(1)} point (ungraded)`}
-      </div>
+    <div className="w-full">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
 
-      <div
-        className="text-[15px] prose dark:prose-invert max-w-none [&_p]:m-0"
-        dangerouslySetInnerHTML={{ __html: rewriteHtml(parsed.questionHtml) }}
-      />
+        {/* Question */}
+        <div
+          className="text-[20px] font-bold leading-snug text-foreground"
+          dangerouslySetInnerHTML={{ __html: rewriteHtml(parsed.questionHtml) }}
+        />
 
-      {isInput ? (
-        <div className="mt-4 flex items-center gap-3">
-          <input
-            type="text"
-            disabled={submitted}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            className={`w-64 h-10 rounded-md border px-3 py-2 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:opacity-100 ${submitted ? (isCorrect ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10') : 'border-input bg-background'}`}
-            placeholder="Nhập câu trả lời của bạn..."
-            onClick={(e) => e.stopPropagation()}
-          />
-          {submitted && (
-            <div className="shrink-0">
-              {isCorrect ? <Check className="w-5 h-5 text-green-500 stroke-[3]" /> : <X className="w-5 h-5 text-red-500 stroke-[3]" />}
-            </div>
-          )}
+        {/* Type info badge */}
+        <div className="flex items-center gap-2 text-[14px] font-medium text-muted-foreground bg-muted/30 w-fit px-3 py-1.5 rounded-md border border-border/50">
+          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+          <span>{typeInfoText}</span>
         </div>
-      ) : isDropdown ? (
-        <div className="mt-4 flex items-center gap-3">
-          <Select
-            value={inputValue}
-            onValueChange={setInputValue}
-            disabled={submitted}
-          >
-            <SelectTrigger
-              className={`w-full h-10 ${submitted ? (isCorrect ? 'border-green-500 bg-green-500/10 text-green-900 dark:text-green-200' : 'border-red-500 bg-red-500/10 text-red-900 dark:text-red-200') : 'border-input bg-background'}`}
-            >
-              <SelectValue placeholder="Select an option" />
-            </SelectTrigger>
-            <SelectContent>
-              {parsed.choices.map((c: any) => (
-                <SelectItem key={c.id} value={c.html}>{c.html}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {submitted && (
-            <div className="shrink-0">
-              {isCorrect ? <Check className="w-5 h-5 text-green-500 stroke-[3]" /> : <X className="w-5 h-5 text-red-500 stroke-[3]" />}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2 mt-4">
-          {parsed.choices.map((choice: any) => {
-            const isSelected = selected.has(choice.id);
-            const showCorrectness = submitted && isSelected;
-            const isChoiceCorrect = isMulti ? isCorrect : choice.correct;
 
-            let borderClass = "border-border";
-            if (showCorrectness) {
-              borderClass = isChoiceCorrect ? "border-green-500 bg-green-500/10" : "border-red-500 bg-red-500/10";
-            } else if (isSelected) {
-              borderClass = "border-primary";
-            }
-
-            return (
-              <div
-                key={choice.id}
-                className={`flex items-start gap-3 p-3 rounded-md border bg-background cursor-pointer transition-colors ${borderClass} hover:bg-muted/50`}
-                onClick={(e) => { e.stopPropagation(); toggleChoice(choice.id); }}
-              >
-                <div className="pt-[1px]">
-                  <div className={`w-[18px] h-[18px] rounded-${isMulti ? 'sm' : 'full'} border flex items-center justify-center shrink-0 ${isSelected ? (isMulti ? 'bg-primary border-primary' : 'border-primary') : 'border-input'}`}>
-                    {isSelected && (
-                      isMulti ? <Check className="w-3.5 h-3.5 text-primary-foreground stroke-[3]" /> : <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                    )}
-                  </div>
-                </div>
-                <div
-                  className="flex-1 text-[15px] prose dark:prose-invert max-w-none [&_p]:m-0 leading-tight"
-                  dangerouslySetInnerHTML={{ __html: rewriteHtml(choice.html) }}
-                />
-                {showCorrectness && (
-                  <div className="shrink-0 pt-[1px]">
-                    {isChoiceCorrect ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <X className="w-4 h-4 text-red-500" />
-                    )}
-                  </div>
-                )}
+        {/* Choices */}
+        {isInput ? (
+          <div className="space-y-3">
+            <input
+              type="text"
+              disabled={submitted}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              className={`w-full rounded-xl border-2 bg-background text-foreground p-4 text-[15px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all disabled:opacity-100 ${
+                submitted
+                  ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5')
+                  : 'border-border'
+              }`}
+              placeholder="Nhập câu trả lời của bạn..."
+              onClick={(e) => e.stopPropagation()}
+            />
+            {submitted && (
+              <div className={`flex items-center gap-3 rounded-xl p-4 ${isCorrect ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                {isCorrect ? <Check className="w-5 h-5 text-green-500 stroke-[3] shrink-0" /> : <X className="w-5 h-5 text-red-500 stroke-[3] shrink-0" />}
+                <span className="text-sm font-medium">{isCorrect ? 'Chính xác!' : 'Chưa đúng, hãy thử lại.'}</span>
               </div>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+        ) : isDropdown ? (
+          <div className="space-y-3">
+            <ProblemPreviewDropdown
+              choices={parsed.choices}
+              value={inputValue}
+              onChange={setInputValue}
+              disabled={submitted}
+              submitted={submitted}
+              isCorrect={isCorrect}
+            />
+            {submitted && (
+              <div className={`flex items-center gap-3 rounded-xl p-4 ${isCorrect ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                {isCorrect ? <Check className="w-5 h-5 text-green-500 stroke-[3] shrink-0" /> : <X className="w-5 h-5 text-red-500 stroke-[3] shrink-0" />}
+                <span className="text-sm font-medium">{isCorrect ? 'Chính xác!' : 'Chưa đúng, hãy thử lại.'}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {parsed.choices.map((choice: any, index: number) => {
+              const isSelected = selected.has(choice.id);
+              const showCorrectness = submitted && isSelected;
+              const isChoiceCorrect = isMulti ? isCorrect : choice.correct;
+              const labelLetter = String.fromCharCode(65 + index);
 
-      {submitted && parsed.explanationHtml && (
-        <div className="mt-4 p-4 rounded-md bg-muted/40 border border-border">
-          <div className="font-semibold text-sm mb-2">Giải thích:</div>
-          <div
-            className="text-[14px] prose dark:prose-invert max-w-none [&_p]:m-0"
-            dangerouslySetInnerHTML={{ __html: rewriteHtml(parsed.explanationHtml) }}
-          />
-        </div>
-      )}
+              return (
+                <div
+                  key={choice.id}
+                  className={`group flex w-full items-center gap-4 rounded-2xl p-4 text-left transition-all cursor-pointer ${
+                    submitted && showCorrectness
+                      ? (isChoiceCorrect ? 'bg-green-500/5 ring-1 ring-green-500' : 'bg-red-500/5 ring-1 ring-red-500')
+                      : isSelected
+                        ? 'bg-primary/5 ring-1 ring-primary'
+                        : 'bg-muted/40 hover:bg-muted/80'
+                  } ${submitted ? 'cursor-default' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); toggleChoice(choice.id); }}
+                >
+                  {/* A, B, C, D Box */}
+                  <div
+                    className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl text-[16px] font-bold transition-colors ${
+                      submitted && showCorrectness
+                        ? (isChoiceCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
+                        : isSelected
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background text-foreground shadow-sm'
+                    }`}
+                  >
+                    {labelLetter}
+                  </div>
 
-      {showHint && parsed.hints.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {parsed.hints.map((hint: string, i: number) => (
-            <div key={i} className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-sm text-amber-900 dark:text-amber-200">
-              <span className="font-semibold mr-2">Gợi ý {i + 1}:</span> {hint}
-            </div>
-          ))}
-        </div>
-      )}
+                  <div
+                    className="flex-1 text-[15px] font-medium leading-relaxed text-foreground [&_p]:m-0"
+                    dangerouslySetInnerHTML={{ __html: rewriteHtml(choice.html) }}
+                  />
 
-      <div className="flex justify-between items-center mt-6">
-        <Button
-          variant={submitted ? "secondary" : "default"}
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (submitted) {
-              setSubmitted(false);
-              setSelected(new Set());
-              setInputValue('');
-            } else {
-              handleSubmit();
-            }
-          }}
-          disabled={(isInput || isDropdown ? inputValue.trim().length === 0 : selected.size === 0) && !submitted}
-        >
-          {submitted ? "Làm lại (Retry)" : "Submit"}
-        </Button>
-        {parsed.hints.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-sm font-medium bg-muted/50 hover:bg-muted"
-            onClick={(e) => { e.stopPropagation(); setShowHint(true); }}
-            disabled={showHint}
-          >
-            Hint
-          </Button>
+                  {/* Checkmark / Result icon */}
+                  {submitted && showCorrectness ? (
+                    <div className="shrink-0 pl-2">
+                      {isChoiceCorrect
+                        ? <Check className="h-6 w-6 text-green-500 stroke-[3]" />
+                        : <X className="h-6 w-6 text-red-500 stroke-[3]" />
+                      }
+                    </div>
+                  ) : isSelected ? (
+                    <div className="shrink-0 pl-2">
+                      <Check className="h-6 w-6 text-primary stroke-[2.5]" />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         )}
+
+        {/* Explanation — chỉ hiển thị khi trả lời ĐÚNG */}
+        {submitted && isCorrect && parsed.explanationHtml && (
+          <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-5">
+            <div className="flex items-center gap-2 mb-3 text-green-600 dark:text-green-400">
+              <HelpCircle className="h-5 w-5" />
+              <span className="font-bold text-sm tracking-wide uppercase">Giải thích</span>
+            </div>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-[14px] leading-relaxed text-foreground/90 [&_p]:m-0"
+              dangerouslySetInnerHTML={{ __html: rewriteHtml(parsed.explanationHtml) }}
+            />
+          </div>
+        )}
+
+        {/* Hints */}
+        {showHint && parsed.hints.length > 0 && (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-5">
+            <div className="flex items-center gap-2 mb-3 text-amber-600 dark:text-amber-400">
+              <HelpCircle className="h-5 w-5" />
+              <span className="font-bold text-sm tracking-wide uppercase">Gợi ý</span>
+            </div>
+            <div className="space-y-2">
+              {parsed.hints.map((hint: string, i: number) => (
+                <div key={i} className="text-[14px] leading-relaxed text-foreground/90">
+                  <span className="font-semibold mr-1">Gợi ý {i + 1}:</span> {hint}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Result banner */}
+        {submitted && !isInput && !isDropdown && (
+          <div className={`flex items-center gap-3 rounded-xl p-4 ${isCorrect ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+            {isCorrect ? <Check className="h-5 w-5 text-green-500 stroke-[3] shrink-0" /> : <X className="h-5 w-5 text-red-500 stroke-[3] shrink-0" />}
+            <p className="text-sm font-medium text-foreground">{isCorrect ? 'Chính xác!' : 'Chưa đúng, hãy thử lại.'}</p>
+          </div>
+        )}
+
+        {/* Submit / Retry + Hint buttons */}
+        <div className="flex items-center justify-between pt-2">
+          {/* Hint button (left) */}
+          <div>
+            {parsed.hints.length > 0 && !showHint && (
+              <button
+                className="flex items-center gap-2 rounded-full border-2 border-amber-500/30 bg-amber-500/5 px-5 py-2.5 text-[13px] font-semibold text-amber-600 dark:text-amber-400 transition-all hover:bg-amber-500/10 active:scale-[0.97]"
+                onClick={(e) => { e.stopPropagation(); setShowHint(true); }}
+              >
+                <HelpCircle className="h-4 w-4" />
+                Xem gợi ý
+              </button>
+            )}
+          </div>
+
+          {/* Submit / Retry button (right) */}
+          <div>
+            {!submitted ? (
+              <button
+                disabled={(isInput || isDropdown ? inputValue.trim().length === 0 : selected.size === 0)}
+                onClick={(e) => { e.stopPropagation(); handleSubmit(); }}
+                className="rounded-full bg-primary px-8 py-3 text-[14px] font-bold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Xác nhận
+              </button>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSubmitted(false);
+                  setSelected(new Set());
+                  setInputValue('');
+                  setShowHint(false);
+                }}
+                className="rounded-full bg-secondary text-secondary-foreground px-8 py-3 text-[14px] font-bold shadow-sm transition-all hover:bg-secondary/80 active:scale-[0.97]"
+              >
+                Thử lại
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

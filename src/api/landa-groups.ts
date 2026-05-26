@@ -61,6 +61,15 @@ export interface SubGroupDetail {
   team_count: number;
   teams: Team[];
   created_at: string;
+  // Legacy direct-assignment fields (still returned by backend)
+  member_count?: number;
+  course_count?: number;
+  category_count?: number;
+  course_category_count?: number;
+  members: SubGroupMember[];
+  courses: AssignedCourse[];
+  categories: AssignedCategory[];
+  course_categories: AssignedCourseCategory[];
 }
 
 export interface Team {

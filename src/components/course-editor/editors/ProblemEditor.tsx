@@ -314,10 +314,8 @@ export default function ProblemEditor({
       };
       setState(newState);
       onXmlChange(serializeProblemXml(newState));
-      setViewMode('ui');
     } else {
       onXmlChange(type.template);
-      setViewMode('raw');
     }
   };
 
@@ -542,11 +540,6 @@ export default function ProblemEditor({
           </div>
 
           <div className="w-full lg:w-72 shrink-0 space-y-6">
-            <div className="border border-border rounded-xl p-4 bg-muted/10 space-y-3">
-              <label className="text-sm font-semibold text-primary">Điểm số</label>
-              <div className="text-sm font-medium">1 điểm <span className="text-muted-foreground font-normal">· Không giới hạn lần thử</span></div>
-            </div>
-
             <div className="border border-border rounded-xl p-4 bg-muted/10 space-y-3">
               <label className="text-sm font-semibold text-primary">Gợi ý</label>
               <div className="space-y-2">
