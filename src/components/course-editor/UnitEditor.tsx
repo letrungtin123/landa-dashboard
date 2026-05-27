@@ -45,6 +45,7 @@ import ProblemEditor, { PROBLEM_TYPES, parseProblemXml } from './editors/Problem
 import CrosswordEditor, { CrosswordWord } from './editors/CrosswordEditor';
 import SortableEditor, { SortableItem } from './editors/SortableEditor';
 import FaqEditor, { FaqItem } from './editors/FaqEditor';
+import PdfEditor from './editors/PdfEditor';
 import { CrosswordPreviewInteractive } from './CrosswordPreview';
 import DiagramPreviewInteractive from './editors/diagram/DiagramPreviewInteractive';
 import DiagramEditor, { DiagramXBlockData } from './editors/DiagramEditor';
@@ -112,6 +113,11 @@ const COMPONENT_TYPES: ComponentType[] = [
     id: 'la_faq', category: 'la_faq', label: 'FAQ', desc: 'Câu hỏi thường gặp',
     icon: <MessageSquareText className="h-6 w-6" />,
     colorClass: 'border-teal-200 bg-teal-50 hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/30 dark:hover:bg-teal-900/40 text-teal-700 dark:text-teal-300',
+  },
+  {
+    id: 'la_pdf', category: 'la_pdf', label: 'PDF', desc: 'Nhúng tài liệu PDF',
+    icon: <Type className="h-6 w-6" />,
+    colorClass: 'border-rose-200 bg-rose-50 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-300',
   },
 ];
 
@@ -799,6 +805,43 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
       );
     }
 
+    case 'la_pdf': {
+      const pdfUrl = blockData?.metadata?.pdf_url || blockData?.pdf_url || '';
+      if (!pdfUrl) {
+        return (
+          <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground gap-3">
+            <div className="p-3 bg-background rounded-full shadow-sm">
+              <Type className="h-6 w-6 text-muted-foreground/60" />
+            </div>
+            <span className="text-sm font-medium">PDF — hover để nhập link tài liệu</span>
+          </div>
+        );
+      }
+      // Chuyển Google Drive share link → embed preview
+      let embedUrl = pdfUrl;
+      const driveMatch = pdfUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+      if (driveMatch) {
+        embedUrl = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      } else {
+        // Ẩn toolbar mặc định của browser PDF viewer
+        embedUrl = pdfUrl + '#toolbar=0&navpanes=0';
+      }
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-rose-500/10 text-rose-500">
+              <Type className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">PDF Embed</span>
+            <code className="ml-auto text-[11px] font-mono font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 truncate max-w-[300px]">{pdfUrl}</code>
+          </div>
+          <div className="border border-border rounded-xl overflow-hidden bg-muted/30">
+            <iframe src={embedUrl} title="PDF Preview" className="w-full h-[300px]" allow="autoplay" />
+          </div>
+        </div>
+      );
+    }
+
     default:
       return (
         <div className="text-sm text-muted-foreground">[{blockType}] — hover để Edit cấu hình</div>
@@ -1226,6 +1269,10 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
     return Array.isArray(parsed.items) ? parsed.items : [];
   });
 
+  const [pdfUrl, setPdfUrl] = useState(
+    blockInfo?.metadata?.pdf_url || blockInfo?.pdf_url || ''
+  );
+
   const saveMut = useMutation({
     mutationFn: async () => {
       const id = blockInfo?.id;
@@ -1276,6 +1323,12 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
         return studioSubmit(id, {
           display_name: displayName,
           faq_data: JSON.stringify({ items: faqItems }),
+        });
+      }
+      if (category === 'la_pdf') {
+        return studioSubmit(id, {
+          display_name: displayName,
+          pdf_url: pdfUrl,
         });
       }
       return updateXBlock(id, { metadata: { display_name: displayName } });
@@ -1355,6 +1408,16 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
             onDisplayNameChange={setDisplayName}
             items={faqItems}
             onItemsChange={setFaqItems}
+          />
+        );
+      case 'la_pdf':
+        return (
+          <PdfEditor
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+            pdfUrl={pdfUrl}
+            onPdfUrlChange={setPdfUrl}
+            courseId={courseId}
           />
         );
       default:
