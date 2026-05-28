@@ -77,7 +77,7 @@ export function SubGroupPanel({ groupId, selectedId, onSelect }: Props) {
   return (
     <div className="flex flex-col h-full border-r border-border">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Team</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phòng ban</span>
         <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setShowCreate(true)}>
           <Plus className="h-3.5 w-3.5" /> New
         </Button>
@@ -87,7 +87,7 @@ export function SubGroupPanel({ groupId, selectedId, onSelect }: Props) {
         <div className="px-3 py-2 border-b border-border bg-muted/30 flex gap-2">
           <Input
             autoFocus
-            placeholder="Tên nhóm..."
+            placeholder="Tên phòng ban..."
             className="h-8 text-sm"
             value={newName}
             onChange={e => setNewName(e.target.value)}
@@ -114,15 +114,15 @@ export function SubGroupPanel({ groupId, selectedId, onSelect }: Props) {
         ) : subgroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-center px-4">
             <Users className="h-8 w-8 text-muted-foreground/30 mb-2" />
-            <p className="text-xs text-muted-foreground">Chưa có nhóm nào</p>
+            <p className="text-xs text-muted-foreground">Chưa có phòng ban nào</p>
           </div>
         ) : subgroups.map(sg => (
           <div
             key={sg.id}
             onClick={() => onSelect(sg.id)}
             className={`group flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors ${selectedId === sg.id
-                ? 'bg-primary/10 text-primary'
-                : 'hover:bg-muted/40 text-foreground'
+              ? 'bg-primary/10 text-primary'
+              : 'hover:bg-muted/40 text-foreground'
               }`}
           >
             {editId === sg.id ? (

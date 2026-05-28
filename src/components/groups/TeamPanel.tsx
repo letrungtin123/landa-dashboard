@@ -120,11 +120,10 @@ export function TeamPanel({ subgroupId, selectedId, onSelect }: Props) {
           <div
             key={t.id}
             onClick={() => onSelect(t.id)}
-            className={`group flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors ${
-              selectedId === t.id
+            className={`group flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors ${selectedId === t.id
                 ? 'bg-primary/10 text-primary'
                 : 'hover:bg-muted/40 text-foreground'
-            }`}
+              }`}
           >
             {editId === t.id ? (
               <Input
