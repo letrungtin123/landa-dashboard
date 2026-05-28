@@ -119,11 +119,11 @@ export default function UsersPage() {
   const users = statusFilter === 'all'
     ? rawUsers
     : rawUsers.filter((u) => {
-        if (statusFilter === 'pending') return !u.is_active && u.role === 'learner';
-        if (statusFilter === 'active') return u.is_active;
-        if (statusFilter === 'inactive') return !u.is_active && u.role !== 'learner';
-        return true;
-      });
+      if (statusFilter === 'pending') return !u.is_active && u.role === 'learner';
+      if (statusFilter === 'active') return u.is_active;
+      if (statusFilter === 'inactive') return !u.is_active && u.role !== 'learner';
+      return true;
+    });
 
   const handleDeactivate = (user: LandaUser) => {
     confirmDialog({
@@ -150,7 +150,7 @@ export default function UsersPage() {
           },
           ...(groupFilter !== 'all' ? [{
             key: 'subgroup',
-            placeholder: 'Nhóm con',
+            placeholder: 'Team',
             options: subgroupsData?.subgroups?.map(sg => ({ value: sg.id.toString(), label: sg.name })) || [],
           }] : []),
           {
@@ -232,7 +232,7 @@ export default function UsersPage() {
                 users.map((u) => {
                   const statusKey = u.is_active ? 'active' : 'inactive';
                   const displayStatus = !u.is_active && u.role === 'learner' ? 'pending' : statusKey;
-                  
+
                   // Role-based actions logic
                   let canEditDelete = true;
                   if (!isSuperadmin) {

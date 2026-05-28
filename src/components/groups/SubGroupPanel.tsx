@@ -77,7 +77,7 @@ export function SubGroupPanel({ groupId, selectedId, onSelect }: Props) {
   return (
     <div className="flex flex-col h-full border-r border-border">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nhóm con</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Team</span>
         <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => setShowCreate(true)}>
           <Plus className="h-3.5 w-3.5" /> New
         </Button>
@@ -120,11 +120,10 @@ export function SubGroupPanel({ groupId, selectedId, onSelect }: Props) {
           <div
             key={sg.id}
             onClick={() => onSelect(sg.id)}
-            className={`group flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors ${
-              selectedId === sg.id
+            className={`group flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors ${selectedId === sg.id
                 ? 'bg-primary/10 text-primary'
                 : 'hover:bg-muted/40 text-foreground'
-            }`}
+              }`}
           >
             {editId === sg.id ? (
               <Input
