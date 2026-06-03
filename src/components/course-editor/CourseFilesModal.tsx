@@ -243,7 +243,7 @@ export function CourseFilesModal({ courseId, isOpen, onClose }: CourseFilesModal
                           <div className="flex justify-center">
                             {isImage(asset) && asset.thumbnail ? (
                               <div className="h-14 w-[80px] rounded-lg border border-border/50 bg-black/5 flex items-center justify-center overflow-hidden shadow-sm">
-                                <img src={asset.external_url} alt={asset.display_name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                                <img src={asset.url} alt={asset.display_name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
                               </div>
                             ) : (
                               <div className="h-14 w-[80px] rounded-lg border border-border/50 bg-muted/30 flex items-center justify-center">
@@ -286,7 +286,7 @@ export function CourseFilesModal({ courseId, isOpen, onClose }: CourseFilesModal
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 shadow-lg rounded-xl border-border/50">
-                              <DropdownMenuItem onClick={() => window.open(asset.external_url, '_blank')} className="cursor-pointer py-2 px-3">
+                              <DropdownMenuItem onClick={() => window.open(asset.url, '_blank')} className="cursor-pointer py-2 px-3">
                                 <Download className="w-4 h-4 mr-2.5 text-muted-foreground" />
                                 <span className="font-medium">Tải xuống</span>
                               </DropdownMenuItem>
