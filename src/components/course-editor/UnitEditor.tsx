@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getUnitChildren, createXBlock, updateXBlock, deleteXBlock, studioSubmit, getBlockInfo, publishBlock, reorderChildren,
+  getUnitChildren, createXBlock, updateXBlock, deleteXBlock, studioSubmit, getBlockInfo, publishBlock, reorderChildren, deleteCourseAsset, uploadCourseAsset,
 } from '@/api/course-authoring';
 import {
   DndContext,
@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Trash2, GripVertical, Plus, Video, Type, HelpCircle,
-  Save, Edit2, ChevronDown, Puzzle, List, Check, X, Network, MessageSquareText
+  Save, Edit2, ChevronDown, Puzzle, List, Check, X, Network, MessageSquareText, ImageIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import VideoEditor from './editors/VideoEditor';
@@ -46,6 +46,8 @@ import CrosswordEditor, { CrosswordWord } from './editors/CrosswordEditor';
 import SortableEditor, { SortableItem } from './editors/SortableEditor';
 import FaqEditor, { FaqItem } from './editors/FaqEditor';
 import PdfEditor from './editors/PdfEditor';
+import SingleQuizEditor, { QuizChoice, PendingFile } from './editors/SingleQuizEditor';
+import MultiQuizEditor from './editors/MultiQuizEditor';
 import { CrosswordPreviewInteractive } from './CrosswordPreview';
 import DiagramPreviewInteractive from './editors/diagram/DiagramPreviewInteractive';
 import DiagramEditor, { DiagramXBlockData } from './editors/DiagramEditor';
@@ -118,6 +120,16 @@ const COMPONENT_TYPES: ComponentType[] = [
     id: 'la_pdf', category: 'la_pdf', label: 'PDF', desc: 'Nhúng tài liệu PDF',
     icon: <Type className="h-6 w-6" />,
     colorClass: 'border-rose-200 bg-rose-50 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-300',
+  },
+  {
+    id: 'la_single_quiz', category: 'la_single_quiz', label: 'Quiz + Media (1)', desc: 'Trắc nghiệm 1 đáp án + ảnh/video',
+    icon: <ImageIcon className="h-6 w-6" />,
+    colorClass: 'border-cyan-200 bg-cyan-50 hover:bg-cyan-100 dark:border-cyan-800 dark:bg-cyan-950/30 dark:hover:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300',
+  },
+  {
+    id: 'la_multi_quiz', category: 'la_multi_quiz', label: 'Quiz + Media (N)', desc: 'Trắc nghiệm nhiều đáp án + ảnh/video',
+    icon: <ImageIcon className="h-6 w-6" />,
+    colorClass: 'border-pink-200 bg-pink-50 hover:bg-pink-100 dark:border-pink-800 dark:bg-pink-950/30 dark:hover:bg-pink-900/40 text-pink-700 dark:text-pink-300',
   },
 ];
 
@@ -360,7 +372,28 @@ function ComponentCard({ block, courseId, onDelete, onSaved }: {
   }, [loadDetail]);
 
   const delMut = useMutation({
-    mutationFn: () => deleteXBlock(blockId),
+    mutationFn: async () => {
+      // Nếu là quiz có ảnh → xóa ảnh khỏi course assets trước
+      const bType = block.block_type;
+      if (courseId && (bType === 'la_single_quiz' || bType === 'la_multi_quiz') && blockData) {
+        const imgs = parseMaybeJson(blockData?.metadata?.images || blockData?.images || '[]');
+        const imageList = Array.isArray(imgs) ? imgs : [];
+        for (const url of imageList) {
+          if (typeof url === 'string' && (url.includes('/asset-v1:') || url.includes('/c4x/'))) {
+            try {
+              const parts = url.split('/');
+              const assetKey = decodeURIComponent(parts[parts.length - 1] || '');
+              if (assetKey) {
+                await deleteCourseAsset(courseId, assetKey);
+              }
+            } catch (err) {
+              console.warn('Failed to delete quiz image asset:', err);
+            }
+          }
+        }
+      }
+      return deleteXBlock(blockId);
+    },
     onSuccess: () => { toast.success('Đã xóa'); onDelete(); },
     onError: () => toast.error('Xóa thất bại'),
   });
@@ -805,6 +838,41 @@ function ComponentPreview({ blockType, blockData }: { blockType: string; blockDa
       );
     }
 
+    case 'la_single_quiz':
+    case 'la_multi_quiz': {
+      const quizQ = blockData?.metadata?.question_html || '';
+      const quizChoices = parseMaybeJson(blockData?.metadata?.choices || blockData?.choices || '[]');
+      const quizImages = parseMaybeJson(blockData?.metadata?.images || blockData?.images || '[]');
+      const quizVideo = blockData?.metadata?.video_url || '';
+      const quizExplanation = blockData?.metadata?.explanation_html || '';
+      const quizHints = parseMaybeJson(blockData?.metadata?.hints || blockData?.hints || '[]');
+      const isMulti = blockType === 'la_multi_quiz';
+      const choicesList = Array.isArray(quizChoices) ? quizChoices : [];
+
+      if (!quizQ && choicesList.length === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground gap-3">
+            <div className="p-3 bg-background rounded-full shadow-sm">
+              <ImageIcon className="h-6 w-6 text-muted-foreground/60" />
+            </div>
+            <span className="text-sm font-medium">{isMulti ? 'Quiz nhiều đáp án' : 'Quiz 1 đáp án'} + Media — hover để Edit</span>
+          </div>
+        );
+      }
+
+      return (
+        <QuizPreviewInteractive
+          questionHtml={quizQ}
+          choices={choicesList}
+          images={Array.isArray(quizImages) ? quizImages : []}
+          videoUrl={quizVideo}
+          explanationHtml={quizExplanation}
+          hints={Array.isArray(quizHints) ? quizHints : []}
+          isMulti={isMulti}
+        />
+      );
+    }
+
     case 'la_pdf': {
       const pdfUrl = blockData?.metadata?.pdf_url || blockData?.pdf_url || '';
       if (!pdfUrl) {
@@ -1204,6 +1272,255 @@ function ProblemPreviewInteractive({ parsed, weight }: { parsed: any; weight: nu
   );
 }
 
+// ─── Interactive Quiz Preview (clone ProblemPreviewInteractive + media) ──────
+
+function extractYoutubeIdUtil(input: string): string {
+  if (!input) return '';
+  const regexes = [
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const r of regexes) {
+    const m = input.match(r);
+    if (m) return m[1];
+  }
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input.trim())) return input.trim();
+  return '';
+}
+
+function QuizPreviewInteractive({
+  questionHtml,
+  choices,
+  images,
+  videoUrl,
+  explanationHtml,
+  hints,
+  isMulti,
+}: {
+  questionHtml: string;
+  choices: any[];
+  images: string[];
+  videoUrl: string;
+  explanationHtml: string;
+  hints: string[];
+  isMulti: boolean;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+
+  const toggleChoice = (id: string) => {
+    if (submitted) return;
+    const next = new Set(selected);
+    if (!isMulti) {
+      next.clear();
+      next.add(id);
+    } else {
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+    }
+    setSelected(next);
+  };
+
+  const handleSubmit = () => {
+    setSubmitted(true);
+  };
+
+  let isCorrect = false;
+  if (submitted) {
+    const correctIds = new Set(choices.filter((c: any) => c.correct).map((c: any) => c.id));
+    if (isMulti) {
+      isCorrect = selected.size === correctIds.size && [...selected].every(id => correctIds.has(id));
+    } else {
+      isCorrect = selected.size === 1 && correctIds.has([...selected][0]);
+    }
+  }
+
+  const typeInfoText = isMulti ? 'Được phép chọn nhiều đáp án.' : 'Chỉ chọn 1 đáp án.';
+  const youtubeId = extractYoutubeIdUtil(videoUrl);
+
+  return (
+    <div className="w-full">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
+
+        {/* Media: YouTube Video (hiện trước ảnh) */}
+        {youtubeId && youtubeId.length === 11 && (
+          <div className="aspect-video w-full rounded-lg overflow-hidden bg-black border border-border">
+            <iframe
+              width="100%" height="100%"
+              src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
+              title="YouTube Preview"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        )}
+
+        {/* Media: Images */}
+        {images.length > 0 && (
+          <div className="flex items-center justify-center">
+            {images.length >= 2 ? (
+              <ImageCarousel images={images.map((url: string, i: number) => ({ src: url, alt: `Ảnh ${i + 1}` }))} />
+            ) : (
+              <img src={images[0]} alt="Quiz image" className="w-full max-h-80 object-contain rounded-lg border border-border" />
+            )}
+          </div>
+        )}
+
+        {/* Question */}
+        <div
+          className="text-[20px] font-bold leading-snug text-foreground"
+          dangerouslySetInnerHTML={{ __html: rewriteHtml(questionHtml) }}
+        />
+
+        {/* Type info badge */}
+        <div className="flex items-center gap-2 text-[14px] font-medium text-muted-foreground bg-muted/30 w-fit px-3 py-1.5 rounded-md border border-border/50">
+          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+          <span>{typeInfoText}</span>
+        </div>
+
+        {/* Choices */}
+        <div className="space-y-3">
+          {choices.map((choice: any, index: number) => {
+            const isSelected = selected.has(choice.id);
+            const showCorrectness = submitted && isSelected;
+            const isChoiceCorrect = isMulti ? isCorrect : choice.correct;
+            const labelLetter = String.fromCharCode(65 + index);
+
+            return (
+              <div
+                key={choice.id}
+                className={`group flex w-full items-center gap-4 rounded-2xl p-4 text-left transition-all cursor-pointer ${
+                  submitted && showCorrectness
+                    ? (isChoiceCorrect ? 'bg-green-500/5 ring-1 ring-green-500' : 'bg-red-500/5 ring-1 ring-red-500')
+                    : isSelected
+                      ? 'bg-primary/5 ring-1 ring-primary'
+                      : 'bg-muted/40 hover:bg-muted/80'
+                } ${submitted ? 'cursor-default' : ''}`}
+                onClick={(e) => { e.stopPropagation(); toggleChoice(choice.id); }}
+              >
+                {/* A, B, C, D Box */}
+                <div
+                  className={`flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl text-[16px] font-bold transition-colors ${
+                    submitted && showCorrectness
+                      ? (isChoiceCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
+                      : isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-background text-foreground shadow-sm'
+                  }`}
+                >
+                  {labelLetter}
+                </div>
+
+                <div
+                  className="flex-1 text-[15px] font-medium leading-relaxed text-foreground [&_p]:m-0"
+                  dangerouslySetInnerHTML={{ __html: rewriteHtml(choice.html) }}
+                />
+
+                {/* Checkmark / Result icon */}
+                {submitted && showCorrectness ? (
+                  <div className="shrink-0 pl-2">
+                    {isChoiceCorrect
+                      ? <Check className="h-6 w-6 text-green-500 stroke-[3]" />
+                      : <X className="h-6 w-6 text-red-500 stroke-[3]" />
+                    }
+                  </div>
+                ) : isSelected ? (
+                  <div className="shrink-0 pl-2">
+                    <Check className="h-6 w-6 text-primary stroke-[2.5]" />
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Explanation — chỉ hiển thị khi trả lời ĐÚNG */}
+        {submitted && isCorrect && explanationHtml && (
+          <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-5">
+            <div className="flex items-center gap-2 mb-3 text-green-600 dark:text-green-400">
+              <HelpCircle className="h-5 w-5" />
+              <span className="font-bold text-sm tracking-wide uppercase">Giải thích</span>
+            </div>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-[14px] leading-relaxed text-foreground/90 [&_p]:m-0"
+              dangerouslySetInnerHTML={{ __html: rewriteHtml(explanationHtml) }}
+            />
+          </div>
+        )}
+
+        {/* Hints */}
+        {showHint && hints.length > 0 && (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-5">
+            <div className="flex items-center gap-2 mb-3 text-amber-600 dark:text-amber-400">
+              <HelpCircle className="h-5 w-5" />
+              <span className="font-bold text-sm tracking-wide uppercase">Gợi ý</span>
+            </div>
+            <div className="space-y-2">
+              {hints.map((hint: string, i: number) => (
+                <div key={i} className="text-[14px] leading-relaxed text-foreground/90">
+                  <span className="font-semibold mr-1">Gợi ý {i + 1}:</span> {hint}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Result banner */}
+        {submitted && (
+          <div className={`flex items-center gap-3 rounded-xl p-4 ${isCorrect ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+            {isCorrect ? <Check className="h-5 w-5 text-green-500 stroke-[3] shrink-0" /> : <X className="h-5 w-5 text-red-500 stroke-[3] shrink-0" />}
+            <p className="text-sm font-medium text-foreground">{isCorrect ? 'Chính xác!' : 'Chưa đúng, hãy thử lại.'}</p>
+          </div>
+        )}
+
+        {/* Submit / Retry + Hint buttons */}
+        <div className="flex items-center justify-between pt-2">
+          {/* Hint button (left) */}
+          <div>
+            {hints.length > 0 && !showHint && (
+              <button
+                className="flex items-center gap-2 rounded-full border-2 border-amber-500/30 bg-amber-500/5 px-5 py-2.5 text-[13px] font-semibold text-amber-600 dark:text-amber-400 transition-all hover:bg-amber-500/10 active:scale-[0.97]"
+                onClick={(e) => { e.stopPropagation(); setShowHint(true); }}
+              >
+                <HelpCircle className="h-4 w-4" />
+                Xem gợi ý
+              </button>
+            )}
+          </div>
+
+          {/* Submit / Retry button (right) */}
+          <div>
+            {!submitted ? (
+              <button
+                disabled={selected.size === 0}
+                onClick={(e) => { e.stopPropagation(); handleSubmit(); }}
+                className="rounded-full bg-primary px-8 py-3 text-[14px] font-bold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Xác nhận
+              </button>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSubmitted(false);
+                  setSelected(new Set());
+                  setShowHint(false);
+                }}
+                className="rounded-full bg-secondary text-secondary-foreground px-8 py-3 text-[14px] font-bold shadow-sm transition-all hover:bg-secondary/80 active:scale-[0.97]"
+              >
+                Thử lại
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ComponentEditForm ────────────────────────────────────────────────────────
 
 function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
@@ -1273,6 +1590,50 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
     blockInfo?.metadata?.pdf_url || blockInfo?.pdf_url || ''
   );
 
+  // ── Quiz (single/multi) state ──
+  const isMultiQuiz = category === 'la_multi_quiz';
+
+  const [quizQuestionHtml, setQuizQuestionHtml] = useState(
+    blockInfo?.metadata?.question_html || '<p>Nhập câu hỏi của bạn vào đây</p>'
+  );
+  const [quizChoices, setQuizChoices] = useState<QuizChoice[]>(() => {
+    const raw = blockInfo?.metadata?.choices || blockInfo?.choices;
+    if (Array.isArray(raw) && raw.length > 0) return raw;
+    const parsed = parseMaybeJson(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    // Fallback data mẫu khi tạo mới
+    if (isMultiQuiz) {
+      return [
+        { id: 'c1', html: 'Đáp án đúng 1', correct: true },
+        { id: 'c2', html: 'Đáp án sai', correct: false },
+        { id: 'c3', html: 'Đáp án đúng 2', correct: true },
+      ];
+    }
+    return [
+      { id: 'c1', html: 'Đáp án đúng', correct: true },
+      { id: 'c2', html: 'Đáp án sai', correct: false },
+    ];
+  });
+  const [quizImages, setQuizImages] = useState<string[]>(() => {
+    const raw = blockInfo?.metadata?.images || blockInfo?.images;
+    if (Array.isArray(raw)) return raw;
+    const parsed = parseMaybeJson(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  });
+  const [quizVideoUrl, setQuizVideoUrl] = useState(
+    blockInfo?.metadata?.video_url || ''
+  );
+  const [quizExplanation, setQuizExplanation] = useState(
+    blockInfo?.metadata?.explanation_html || ''
+  );
+  const [quizHints, setQuizHints] = useState<string[]>(() => {
+    const raw = blockInfo?.metadata?.hints || blockInfo?.hints;
+    if (Array.isArray(raw)) return raw;
+    const parsed = parseMaybeJson(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  });
+  const [pendingQuizFiles, setPendingQuizFiles] = useState<PendingFile[]>([]);
+
   const saveMut = useMutation({
     mutationFn: async () => {
       const id = blockInfo?.id;
@@ -1329,6 +1690,32 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
         return studioSubmit(id, {
           display_name: displayName,
           pdf_url: pdfUrl,
+        });
+      }
+      if (category === 'la_single_quiz' || category === 'la_multi_quiz') {
+        // Deferred upload: upload pending files trước, lấy URL, merge với saved images
+        let finalImages = [...quizImages];
+        if (pendingQuizFiles.length > 0 && courseId) {
+          for (const pf of pendingQuizFiles) {
+            try {
+              const result = await uploadCourseAsset(courseId, pf.file);
+              const assetUrl = result?.asset?.url || result?.url || '';
+              if (assetUrl) finalImages.push(assetUrl);
+            } catch (err: any) {
+              console.warn('Failed to upload quiz image:', err);
+            }
+            URL.revokeObjectURL(pf.previewUrl);
+          }
+          setPendingQuizFiles([]);
+        }
+        return studioSubmit(id, {
+          display_name: displayName,
+          question_html: quizQuestionHtml,
+          choices: quizChoices,
+          images: finalImages,
+          video_url: quizVideoUrl,
+          explanation_html: quizExplanation,
+          hints: quizHints,
         });
       }
       return updateXBlock(id, { metadata: { display_name: displayName } });
@@ -1417,6 +1804,50 @@ function ComponentEditForm({ blockInfo, courseId, onSaved, onCancel }: {
             onDisplayNameChange={setDisplayName}
             pdfUrl={pdfUrl}
             onPdfUrlChange={setPdfUrl}
+            courseId={courseId}
+          />
+        );
+      case 'la_single_quiz':
+        return (
+          <SingleQuizEditor
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+            questionHtml={quizQuestionHtml}
+            onQuestionChange={setQuizQuestionHtml}
+            choices={quizChoices}
+            onChoicesChange={setQuizChoices}
+            images={quizImages}
+            onImagesChange={setQuizImages}
+            pendingFiles={pendingQuizFiles}
+            onPendingFilesChange={setPendingQuizFiles}
+            videoUrl={quizVideoUrl}
+            onVideoUrlChange={setQuizVideoUrl}
+            explanationHtml={quizExplanation}
+            onExplanationChange={setQuizExplanation}
+            hints={quizHints}
+            onHintsChange={setQuizHints}
+            courseId={courseId}
+          />
+        );
+      case 'la_multi_quiz':
+        return (
+          <MultiQuizEditor
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+            questionHtml={quizQuestionHtml}
+            onQuestionChange={setQuizQuestionHtml}
+            choices={quizChoices}
+            onChoicesChange={setQuizChoices}
+            images={quizImages}
+            onImagesChange={setQuizImages}
+            pendingFiles={pendingQuizFiles}
+            onPendingFilesChange={setPendingQuizFiles}
+            videoUrl={quizVideoUrl}
+            onVideoUrlChange={setQuizVideoUrl}
+            explanationHtml={quizExplanation}
+            onExplanationChange={setQuizExplanation}
+            hints={quizHints}
+            onHintsChange={setQuizHints}
             courseId={courseId}
           />
         );
